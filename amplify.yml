@@ -11,10 +11,10 @@ frontend:
         # Ensure server-side env vars are available to Next.js in Amplify SSR.
         # Amplify console env vars are present at build time; Next loads .env.production for production builds.
         - echo "=== Checking for environment variables ==="
-        - env | grep -E '^(LYZR|MONGODB|DB_NAME)' || echo "No matching env vars found"
+        - env | grep -E '^(LYZR|mongodb_url|db_name)' || echo "No matching env vars found"
         - rm -f .env.production
         - touch .env.production
-        - env | grep -E '^(LYZR_API_KEY|MONGODB_URL|DB_NAME)=' >> .env.production || true
+        - env | grep -E '^(LYZR_API_KEY|mongodb_url|db_name)=' >> .env.production || true
         - echo "=== Contents of .env.production ==="
         - cat .env.production || echo "File is empty or not created"
         - echo "=== Building application ==="
