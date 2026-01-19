@@ -15,8 +15,26 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GSM Projects",
-  description: "Investment Guidelines Management Platform",
+  title: {
+    default: "Goldman Sachs | Investment Guidelines Management",
+    template: "%s | Goldman Sachs",
+  },
+  description: "Goldman Sachs Investment Guidelines Management Platform - Enterprise-grade mandate compliance and portfolio oversight",
+  keywords: ["Goldman Sachs", "Investment Management", "Portfolio Management", "Compliance", "Guidelines"],
+  authors: [{ name: "Goldman Sachs" }],
+  creator: "Goldman Sachs",
+  publisher: "Goldman Sachs",
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/apple-touch-icon.svg',
+  },
+  openGraph: {
+    title: "Goldman Sachs | Investment Guidelines Management",
+    description: "Enterprise-grade mandate compliance and portfolio oversight",
+    siteName: "Goldman Sachs Investment Management",
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

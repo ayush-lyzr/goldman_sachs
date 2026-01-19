@@ -24,7 +24,15 @@ export async function callLyzrAgent<T = unknown>(
 ): Promise<T> {
   const apiKey = process.env.LYZR_API_KEY;
   
+  // Debug logging for Lyzr API key
+  console.log("[Lyzr Agent] Environment variable check:");
+  console.log("[Lyzr Agent] LYZR_API_KEY present:", !!apiKey);
+  console.log("[Lyzr Agent] Available env vars:", Object.keys(process.env).filter(k => 
+    k.includes('LYZR') || k.includes('API_KEY')
+  ));
+  
   if (!apiKey) {
+    console.error("[Lyzr Agent] ERROR: LYZR_API_KEY not found in environment");
     throw new Error("LYZR_API_KEY is not configured");
   }
 

@@ -142,36 +142,48 @@ export default function ProjectsClient() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-lg font-semibold text-slate-900">Goldman Sachs</h1>
-                <p className="text-sm text-slate-500">Client Projects</p>
-              </div>
-              {!loading && stats.total > 0 && (
-                <StatusBadge status="Compliant" />
-              )}
+      {/* Header - Goldman Sachs Branded */}
+      <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 bg-[#64A8F0] border-b border-[#5594d9] shadow-sm">
+        <div className="flex items-center gap-6">
+          {/* Goldman Sachs Logo */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-9 h-9 bg-white rounded-sm shadow-sm">
+              <span className="font-bold text-[#64A8F0] text-base tracking-tight">GS</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white font-semibold text-base leading-tight hidden sm:inline">Goldman Sachs</span>
+              <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Investment Management</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => void load()}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Update Projects
-            </button>
+          
+          {/* Project Info */}
+          <div className="flex items-center gap-3 border-l border-white/20 pl-6 ml-2">
+            <div>
+              <h2 className="font-semibold text-white text-sm">
+                Client Projects
+              </h2>
+              <p className="text-[11px] text-white/70 font-medium">
+                {loading ? "Loading..." : `${stats.total} Active Projects`}
+              </p>
+            </div>
+            {!loading && stats.total > 0 && stats.compliant === stats.total && (
+              <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-white/95 text-[#64A8F0] shadow-sm">
+                All Compliant
+              </span>
+            )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => void load()}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#64A8F0] bg-white border border-white rounded-lg hover:bg-white/90 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
         </div>
       </header>
 
@@ -269,7 +281,7 @@ export default function ProjectsClient() {
                 setShowModal(true);
                 setTimeout(() => inputRef.current?.focus(), 100);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#64A8F0] rounded-lg hover:bg-[#5594d9] transition-colors shadow-sm"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -372,7 +384,10 @@ export default function ProjectsClient() {
           />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 animate-fade-in-up">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-slate-900">Add New Portfolio</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Add New Project</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Create a new investment guidelines project</p>
+              </div>
               <button 
                 onClick={() => setShowModal(false)}
                 className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
@@ -385,14 +400,14 @@ export default function ProjectsClient() {
 
             <form onSubmit={onCreate}>
               <label className="block mb-5">
-                <span className="text-sm font-medium text-slate-700 mb-2 block">Portfolio Name</span>
+                <span className="text-sm font-medium text-slate-700 mb-2 block">Project Name</span>
                 <input
                   ref={inputRef}
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Blackstone Family Office"
-                  className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all placeholder:text-slate-400"
+                  className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#64A8F0]/20 focus:border-[#64A8F0] transition-all placeholder:text-slate-400"
                   maxLength={120}
                 />
               </label>
@@ -408,9 +423,9 @@ export default function ProjectsClient() {
                 <button
                   type="submit"
                   disabled={!name.trim() || creating}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#64A8F0] rounded-xl hover:bg-[#5594d9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                  {creating ? "Creating..." : "Add Portfolio"}
+                  {creating ? "Creating..." : "Create Project"}
                 </button>
               </div>
             </form>

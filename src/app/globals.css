@@ -92,6 +92,10 @@
     --rose: 0 72% 51%;
     --cyan: 195 80% 45%;
     --violet: 262 83% 58%;
+    
+    /* Goldman Sachs Brand Colors */
+    --gs-blue: 213 58% 66%;
+    --gs-dark-blue: 211 100% 19%;
   }
   .dark {
     --background: 225 50% 7%;
@@ -136,6 +140,10 @@
     --rose: 0 72% 55%;
     --cyan: 195 80% 50%;
     --violet: 262 83% 63%;
+    
+    /* Goldman Sachs Brand Colors */
+    --gs-blue: 213 58% 66%;
+    --gs-dark-blue: 211 100% 19%;
   }
 }
 

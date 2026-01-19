@@ -49,16 +49,42 @@ export function AppHeader({ mandateName, status = "compliant" }: AppHeaderProps)
   const displayName = mandateName || projectName || "No Project Loaded";
 
   return (
-    <header className="flex items-center justify-between px-4 lg:px-6 py-4 bg-card border-b border-border">
-      <div className="flex items-center gap-4">
+    <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 bg-[#64A8F0] border-b border-[#5594d9] shadow-sm">
+      <div className="flex items-center gap-6">
+        {/* Goldman Sachs Logo */}
         <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-9 h-9 bg-white rounded-sm shadow-sm">
+            <span className="font-bold text-[#64A8F0] text-base tracking-tight">GS</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-white font-semibold text-base leading-tight hidden sm:inline">Goldman Sachs</span>
+            <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Investment Management</span>
+          </div>
+        </div>
+        
+        {/* Project Info */}
+        <div className="flex items-center gap-3 border-l border-white/20 pl-6 ml-2">
           <div>
-            <h2 className="font-semibold text-foreground">
+            <h2 className="font-semibold text-white text-sm">
               {isLoading ? "Loading..." : displayName}
             </h2>
-            <p className="text-xs text-muted-foreground">Project</p>
+            <p className="text-[11px] text-white/70 font-medium">Guidelines Project</p>
           </div>
-          <Badge variant={currentStatus.variant}>{currentStatus.label}</Badge>
+          {currentStatus.variant === "success" && (
+            <Badge className="bg-white/95 text-[#64A8F0] hover:bg-white border-0 shadow-sm font-medium">
+              {currentStatus.label}
+            </Badge>
+          )}
+          {currentStatus.variant === "warning" && (
+            <Badge className="bg-amber-500 text-white hover:bg-amber-600 border-0 shadow-sm font-medium">
+              {currentStatus.label}
+            </Badge>
+          )}
+          {currentStatus.variant === "destructive" && (
+            <Badge className="bg-rose-500 text-white hover:bg-rose-600 border-0 shadow-sm font-medium">
+              {currentStatus.label}
+            </Badge>
+          )}
         </div>
       </div>
 
