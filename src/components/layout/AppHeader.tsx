@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, RefreshCw } from "lucide-react";
 import { UpdateGuidelinesDialog } from "@/components/dashboard/UpdateGuidelinesDialog";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface AppHeaderProps {
   mandateName?: string;
@@ -52,15 +53,21 @@ export function AppHeader({ mandateName, status = "compliant" }: AppHeaderProps)
     <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 bg-[#64A8F0] border-b border-[#5594d9] shadow-sm">
       <div className="flex items-center gap-6">
         {/* Goldman Sachs Logo */}
-        <div className="flex items-center gap-3">
+        <Link
+          href="/"
+          aria-label="Go to home"
+          className="flex items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#64A8F0] hover:opacity-95 active:opacity-90 transition-opacity"
+        >
           <div className="flex items-center justify-center w-9 h-9 bg-white rounded-sm shadow-sm">
             <span className="font-bold text-[#64A8F0] text-base tracking-tight">GS</span>
           </div>
           <div className="flex flex-col">
             <span className="text-white font-semibold text-base leading-tight hidden sm:inline">Goldman Sachs</span>
-            <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Investment Management</span>
+            <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">
+              Investment Management
+            </span>
           </div>
-        </div>
+        </Link>
         
         {/* Project Info */}
         <div className="flex items-center gap-3 border-l border-white/20 pl-6 ml-2">

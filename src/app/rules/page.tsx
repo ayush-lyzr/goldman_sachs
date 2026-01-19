@@ -286,7 +286,9 @@ function RulesPageContent() {
           {/* Action Footer */}
           <div className="flex justify-end pt-4 border-t border-border/50">
             <Button 
-              onClick={() => router.push(`/simulation${isComparing ? "?compare=true" : ""}`)} 
+              // Exiting compare mode when continuing forward keeps downstream pages
+              // running the real (non-demo) gap analysis + simulation flow.
+              onClick={() => router.push("/simulation")} 
               size="default"
               className="gap-2 px-6 h-10 text-sm font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
             >

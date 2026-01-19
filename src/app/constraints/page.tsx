@@ -169,10 +169,13 @@ function ConstraintsPageContent() {
         const storedRules = sessionStorage.getItem("extractedRules");
         const storedPDF = sessionStorage.getItem("extractedPDF");
         
+        let parsedRules: ExtractedRule[] = [];
+        
         if (storedRules) {
           try {
             const rules = JSON.parse(storedRules);
-            setExtractedRules(Array.isArray(rules) ? rules : []);
+            parsedRules = Array.isArray(rules) ? rules : [];
+            setExtractedRules(parsedRules);
           } catch (error) {
             console.error("Error parsing extracted rules:", error);
             setExtractedRules([]);
@@ -190,13 +193,64 @@ function ConstraintsPageContent() {
         
         // Check if there are existing versions in the database
         const customerId = sessionStorage.getItem("currentCustomerId");
+        const projectId = sessionStorage.getItem("currentProjectId");
+        let hasVersions = false;
+        
         if (customerId) {
           try {
             const response = await fetch(`/api/projects/rulesets?customerId=${customerId}`);
             if (response.ok) {
               const data = await response.json();
               // Show toggle if there's at least 1 existing version
-              setHasExistingVersions(data.rulesets && data.rulesets.length > 0);
+              hasVersions = data.rulesets && data.rulesets.length > 0;
+              setHasExistingVersions(hasVersions);
+              
+              // Auto-trigger comparison if there are existing versions and we have extracted rules
+              if (hasVersions && parsedRules.length > 0 && customerId && projectId) {
+                console.log("[constraints] Auto-triggering comparison mode for version update");
+                setComparingRules(true);
+                
+                try {
+                  // Get the latest version
+                  const latestVersion = data.rulesets[data.rulesets.length - 1].version;
+                  
+                  // Fetch the full data for the latest version
+                  const versionResponse = await fetch(`/api/projects/rulesets/${latestVersion}?customerId=${customerId}`);
+                  
+                  if (versionResponse.ok) {
+                    const versionData = await versionResponse.json();
+                    const latestRawRules = versionData.ruleset.data.raw_rules || [];
+                    
+                    if (latestRawRules.length > 0) {
+                      // Call the rules diff API
+                      const diffResponse = await fetch("/api/agents/rules-diff", {
+                        method: "POST",
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          projectId: projectId,
+                          customerId: customerId,
+                          rulesExtractorResponse: parsedRules,
+                          latestRulesFromDB: latestRawRules,
+                        }),
+                      });
+                      
+                      if (diffResponse.ok) {
+                        const diffData = await diffResponse.json();
+                        console.log("[constraints] Auto-comparison complete:", diffData);
+                        setRulesDiff(diffData);
+                        setIsComparing(true);
+                      }
+                    }
+                  }
+                } catch (compareError) {
+                  console.error("[constraints] Auto-comparison failed:", compareError);
+                  // Don't show error to user, just disable comparison mode
+                } finally {
+                  setComparingRules(false);
+                }
+              }
             }
           } catch (error) {
             console.error("Error checking for existing versions:", error);
@@ -309,10 +363,12 @@ function ConstraintsPageContent() {
   };
 
   const handleGenerateRules = async () => {
-    // For comparison mode, just navigate
+    // Even if the user was comparing versions, the forward flow should run the
+    // real pipeline (rules → gap analysis) and then continue normally.
+    // Comparison mode is meant for review, not to replace downstream steps.
     if (isComparing) {
-      router.push("/rules?compare=true");
-      return;
+      setIsComparing(false);
+      setRulesDiff(null);
     }
 
     if (extractedRules.length === 0) {
@@ -439,9 +495,9 @@ function ConstraintsPageContent() {
 
   return (
     <AppLayout>
-      <div className="space-y-5 max-w-[1400px] mx-auto">
+      <div className="space-y-3 max-w-[1400px] mx-auto">
         {/* Page Header */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-5 text-white animate-fade-up">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 text-white animate-fade-up">
           {/* Background effects */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute inset-0" style={{
@@ -453,9 +509,9 @@ function ConstraintsPageContent() {
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-violet-500/15 rounded-full blur-3xl" />
           
           <div className="relative flex items-start justify-between">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
+                <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
                   <FileSearch className="w-4 h-4" />
                 </div>
                 <div>
@@ -492,7 +548,7 @@ function ConstraintsPageContent() {
         {/* Comparison Mode Banner */}
         {isComparing && (
           <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/[0.02] to-transparent overflow-hidden animate-fade-up">
-            <CardContent className="py-4 px-5">
+            <CardContent className="py-3 px-4">
               <div className="flex items-center gap-4">
                 <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
                   <GitCompare className="w-4 h-4 text-primary" />
@@ -541,16 +597,16 @@ function ConstraintsPageContent() {
         )}
 
         {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className="grid lg:grid-cols-4 gap-4">
           {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-4">
             {loading ? (
               <Card className="border-dashed">
-                <CardContent className="py-16 text-center">
-                  <div className="relative mx-auto w-16 h-16 mb-6">
+                <CardContent className="py-12 text-center">
+                  <div className="relative mx-auto w-14 h-14 mb-5">
                     <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }} />
                     <div className="relative flex items-center justify-center w-full h-full rounded-full bg-primary/10">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <Loader2 className="w-7 h-7 animate-spin text-primary" />
                     </div>
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">Processing Document</h3>
@@ -560,14 +616,14 @@ function ConstraintsPageContent() {
                 </CardContent>
               </Card>
             ) : isComparing ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {comparingRules ? (
                   <Card className="border-dashed">
-                    <CardContent className="py-16 text-center">
-                      <div className="relative mx-auto w-16 h-16 mb-6">
+                    <CardContent className="py-12 text-center">
+                      <div className="relative mx-auto w-14 h-14 mb-5">
                         <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }} />
                         <div className="relative flex items-center justify-center w-full h-full rounded-full bg-primary/10">
-                          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                          <Loader2 className="w-7 h-7 animate-spin text-primary" />
                         </div>
                       </div>
                       <h3 className="text-lg font-semibold text-foreground mb-2">Comparing Versions</h3>
@@ -598,7 +654,7 @@ function ConstraintsPageContent() {
             ) : extractedRules.length > 0 ? (
               <ExtractedRulesDisplay rules={extractedRules} />
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {constraints.map((constraint, index) => (
                   <div 
                     key={constraint.id}
@@ -612,10 +668,10 @@ function ConstraintsPageContent() {
             )}
 
             {/* Processing Status & Action */}
-            <div className="space-y-4 pt-4">
+            <div className="space-y-3 pt-3">
               {generating && processingStep && (
                 <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent overflow-hidden">
-                  <CardContent className="py-4 px-5">
+                  <CardContent className="py-3 px-4">
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '1.5s' }} />
@@ -661,16 +717,16 @@ function ConstraintsPageContent() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-5">
+          <div className="space-y-3">
             {/* Document Info Card */}
             <Card className="overflow-hidden animate-fade-up" style={{ animationDelay: '0.2s' }}>
-              <CardHeader className="pb-4 border-b border-border/50 bg-muted/30">
+              <CardHeader className="pb-3 border-b border-border/50 bg-muted/30">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <FileText className="w-4 h-4 text-primary" />
                   {isComparing ? "Document Comparison" : "Source Document"}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-5 space-y-4">
+              <CardContent className="pt-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
                     <BookOpen className="w-5 h-5 text-primary" />
@@ -695,7 +751,7 @@ function ConstraintsPageContent() {
                   </div>
                 </div>
                 
-                <div className="pt-3 border-t border-border/50 space-y-3">
+                <div className="pt-2.5 border-t border-border/50 space-y-2.5">
                   {isComparing ? (
                     <>
                       <div className="flex justify-between items-center text-sm">
@@ -741,13 +797,13 @@ function ConstraintsPageContent() {
 
             {/* Agent Status Card */}
             <Card className="overflow-hidden animate-fade-up" style={{ animationDelay: '0.3s' }}>
-              <CardHeader className="pb-4 border-b border-border/50 bg-muted/30">
+              <CardHeader className="pb-3 border-b border-border/50 bg-muted/30">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <Layers className="w-4 h-4 text-primary" />
                   Agent Status
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-5">
+              <CardContent className="pt-4">
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg ${loading ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
                     {loading ? (
@@ -773,7 +829,7 @@ function ConstraintsPageContent() {
 
                 {/* Tip */}
                 {!loading && !isComparing && extractedRules.length === 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/50">
+                  <div className="mt-3 pt-3 border-t border-border/50">
                     <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg p-3">
                       <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                       <span>No extracted rules found. Using demo constraints for preview.</span>
@@ -785,7 +841,7 @@ function ConstraintsPageContent() {
 
             {/* Quick Tip Card */}
             <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-transparent animate-fade-up" style={{ animationDelay: '0.4s' }}>
-              <CardContent className="pt-5 pb-5">
+              <CardContent className="pt-4 pb-4">
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Sparkles className="w-4 h-4 text-primary" />
@@ -793,7 +849,10 @@ function ConstraintsPageContent() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">Pro Tip</p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Hover over constraint cards to see additional details and confidence scores.
+                      {isComparing
+                        ? "Review each card to see what changed between versions."
+                        : "Hover over constraint cards to see additional details."
+                      }
                     </p>
                   </div>
                 </div>
@@ -810,13 +869,13 @@ export default function ConstraintsPage() {
   return (
     <Suspense fallback={
       <AppLayout>
-        <div className="space-y-5 max-w-[1400px] mx-auto">
+        <div className="space-y-3 max-w-[1400px] mx-auto">
           <Card className="border-dashed">
-            <CardContent className="py-16 text-center">
-              <div className="relative mx-auto w-16 h-16 mb-6">
+            <CardContent className="py-12 text-center">
+              <div className="relative mx-auto w-14 h-14 mb-5">
                 <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }} />
                 <div className="relative flex items-center justify-center w-full h-full rounded-full bg-primary/10">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <Loader2 className="w-7 h-7 animate-spin text-primary" />
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">Loading...</h3>

@@ -30,16 +30,16 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
   const totalRules = rules.reduce((acc, section) => acc + section.rules.length, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Summary Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10 p-4">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10 p-3">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl" />
         
         <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
               <BookOpen className="w-4 h-4 text-primary" />
             </div>
             <div>
@@ -53,12 +53,12 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
           </div>
           
           <div className="flex gap-2">
-            <div className="px-3 py-1.5 rounded-lg bg-background/80 border border-border/50 backdrop-blur-sm">
-              <div className="text-lg font-bold text-primary tabular-nums">{rules.length}</div>
+            <div className="px-2.5 py-1 rounded-lg bg-background/80 border border-border/50 backdrop-blur-sm">
+              <div className="text-base font-bold text-primary tabular-nums">{rules.length}</div>
               <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Sections</div>
             </div>
-            <div className="px-3 py-1.5 rounded-lg bg-background/80 border border-border/50 backdrop-blur-sm">
-              <div className="text-lg font-bold text-primary tabular-nums">{totalRules}</div>
+            <div className="px-2.5 py-1 rounded-lg bg-background/80 border border-border/50 backdrop-blur-sm">
+              <div className="text-base font-bold text-primary tabular-nums">{totalRules}</div>
               <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Rules</div>
             </div>
           </div>
@@ -66,7 +66,7 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
       </div>
 
       {/* Section Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {rules.map((section, sectionIndex) => {
           const isExpanded = expandedSections.includes(sectionIndex);
           
@@ -98,39 +98,39 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
               {/* Header - Always visible */}
               <button
                 onClick={() => toggleSection(sectionIndex)}
-                className="w-full text-left p-6 pl-8 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors duration-300"
+                className="w-full text-left p-4 pl-6 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors duration-300"
               >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="relative p-2.5 rounded-xl bg-primary/5 border border-primary/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-300">
-                    <FileCheck2 className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="relative p-2 rounded-xl bg-primary/5 border border-primary/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-300">
+                    <FileCheck2 className="w-4 h-4 text-primary" />
                     {/* Floating sparkle */}
                     <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex items-center gap-3 mb-0.5">
                       <span className="font-mono text-xs font-bold text-primary/50 tracking-wider">
-                        Section {String(sectionIndex + 1).padStart(2, '0')}
+                        Constraints {String(sectionIndex + 1).padStart(2, '0')}
                       </span>
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors duration-300 truncate pr-4">
+                    <h3 className="text-base font-semibold text-foreground tracking-tight group-hover:text-primary transition-colors duration-300 truncate pr-4">
                       {section.title}
                     </h3>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <Badge 
                     variant="outline" 
-                    className="text-xs font-semibold shrink-0 bg-primary/5 border-primary/20 px-3 py-1.5 group-hover:bg-primary/10 group-hover:border-primary/30 transition-all duration-300"
+                    className="text-xs font-semibold shrink-0 bg-primary/5 border-primary/20 px-2.5 py-1 group-hover:bg-primary/10 group-hover:border-primary/30 transition-all duration-300"
                   >
-                    <Sparkles className="w-3 h-3 mr-1.5 inline-block text-primary/60" />
+                    <Sparkles className="w-3 h-3 mr-1 inline-block text-primary/60" />
                     {section.rules.length} {section.rules.length === 1 ? 'Rule' : 'Rules'}
                   </Badge>
                   
                   <ChevronRight 
                     className={`
-                      w-5 h-5 text-muted-foreground transition-transform duration-300
+                      w-4 h-4 text-muted-foreground transition-transform duration-300
                       ${isExpanded ? 'rotate-90' : 'rotate-0'}
                     `} 
                   />
@@ -144,9 +144,9 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
                   ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
                 `}
               >
-                <div className="px-6 pb-6 pl-8 pt-0">
+                <div className="px-4 pb-4 pl-6 pt-0">
                   {/* Divider */}
-                  <div className="mb-5 flex items-center gap-3">
+                  <div className="mb-3 flex items-center gap-3">
                     <div className="flex-1 h-px bg-gradient-to-r from-border via-border/50 to-transparent" />
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                       Requirements
@@ -155,12 +155,12 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
                   </div>
 
                   {/* Rules Grid */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {section.rules.map((rule, ruleIndex) => (
                       <div 
                         key={ruleIndex}
                         className={`
-                          group/rule relative flex items-start gap-4 p-4 rounded-xl
+                          group/rule relative flex items-start gap-3 p-3 rounded-lg
                           bg-muted/20 hover:bg-muted/40 
                           border border-transparent hover:border-border/50
                           transition-all duration-300 cursor-default
@@ -172,8 +172,8 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
                         }}
                       >
                         {/* Rule number indicator */}
-                        <div className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 group-hover/rule:from-primary/20 group-hover/rule:to-primary/10 group-hover/rule:border-primary/20 transition-all duration-300">
-                          <span className="font-mono text-[11px] font-bold text-primary/70 group-hover/rule:text-primary tabular-nums">
+                        <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 group-hover/rule:from-primary/20 group-hover/rule:to-primary/10 group-hover/rule:border-primary/20 transition-all duration-300">
+                          <span className="font-mono text-[10px] font-bold text-primary/70 group-hover/rule:text-primary tabular-nums">
                             {ruleIndex + 1}
                           </span>
                         </div>
@@ -187,17 +187,6 @@ export function ExtractedRulesDisplay({ rules }: ExtractedRulesDisplayProps) {
                         <div className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-primary/0 group-hover/rule:bg-primary/30 transition-all duration-300" />
                       </div>
                     ))}
-                  </div>
-
-                  {/* Section Footer */}
-                  <div className="mt-5 pt-4 border-t border-border/30 flex items-center justify-center">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
-                      <div className="w-12 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                      <span className="font-medium tracking-wide uppercase">
-                        {section.rules.length} {section.rules.length === 1 ? 'Requirement' : 'Requirements'} in Section
-                      </span>
-                      <div className="w-12 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                    </div>
                   </div>
                 </div>
               </div>

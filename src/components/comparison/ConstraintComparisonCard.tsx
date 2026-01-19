@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Plus, Minus, RefreshCw, Gauge, TrendingUp, TrendingDown, Equal } from "lucide-react";
+import { Plus, Minus, RefreshCw, Equal } from "lucide-react";
 
 interface ConstraintDelta {
   id: string;
@@ -60,10 +60,6 @@ export function ConstraintComparisonCard({ constraint }: ConstraintComparisonCar
   const config = changeConfig[constraint.changeType];
   const Icon = config.icon;
 
-  const confidenceChange = constraint.previousConfidence 
-    ? constraint.confidence - constraint.previousConfidence 
-    : 0;
-
   return (
     <Card 
       className={`
@@ -93,50 +89,6 @@ export function ConstraintComparisonCard({ constraint }: ConstraintComparisonCar
               <span className="ml-3 font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">
                 #{constraint.id}
               </span>
-            </div>
-          </div>
-          
-          {/* Confidence indicator */}
-          <div className="flex items-center gap-3">
-            {constraint.previousConfidence && constraint.changeType === "modified" && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-mono tabular-nums">{constraint.previousConfidence}%</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            )}
-            <div className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-lg border
-              ${constraint.confidence >= 90 
-                ? "bg-emerald-500/10 border-emerald-500/30" 
-                : "bg-amber-500/10 border-amber-500/30"
-              }
-            `}>
-              <Gauge className={`w-3.5 h-3.5 ${
-                constraint.confidence >= 90 
-                  ? "text-emerald-600 dark:text-emerald-400" 
-                  : "text-amber-600 dark:text-amber-400"
-              }`} />
-              <span className={`text-sm font-bold tabular-nums ${
-                constraint.confidence >= 90 
-                  ? "text-emerald-600 dark:text-emerald-400" 
-                  : "text-amber-600 dark:text-amber-400"
-              }`}>
-                {constraint.confidence}%
-              </span>
-              {confidenceChange !== 0 && (
-                <span className={`flex items-center gap-0.5 text-xs font-medium ${
-                  confidenceChange > 0 
-                    ? "text-emerald-600 dark:text-emerald-400" 
-                    : "text-rose-600 dark:text-rose-400"
-                }`}>
-                  {confidenceChange > 0 ? (
-                    <TrendingUp className="w-3 h-3" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" />
-                  )}
-                  {confidenceChange > 0 ? "+" : ""}{confidenceChange}
-                </span>
-              )}
             </div>
           </div>
         </div>

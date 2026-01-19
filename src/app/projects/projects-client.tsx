@@ -98,9 +98,15 @@ export default function ProjectsClient() {
           throw new Error(data?.error ?? `Create failed (${res.status})`);
         }
 
-        // Store the customerId in sessionStorage
+        // Store the customerId and projectId in sessionStorage
         if (typeof window !== "undefined") {
           sessionStorage.setItem("currentCustomerId", customerId);
+          sessionStorage.setItem("currentProjectId", data.id || customerId);
+          // Clear any previously extracted rules to ensure fresh state
+          sessionStorage.removeItem("extractedRules");
+          sessionStorage.removeItem("extractedPDF");
+          sessionStorage.removeItem("mappedRules");
+          sessionStorage.removeItem("gapAnalysis");
         }
 
         setName("");
@@ -350,6 +356,13 @@ export default function ProjectsClient() {
                       onClick={() => {
                         if (project.customerId && typeof window !== "undefined") {
                           sessionStorage.setItem("currentCustomerId", project.customerId);
+                          // Also set the project ID for consistency
+                          sessionStorage.setItem("currentProjectId", project.id);
+                          // Clear any previously extracted rules to ensure fresh extraction for new uploads
+                          sessionStorage.removeItem("extractedRules");
+                          sessionStorage.removeItem("extractedPDF");
+                          sessionStorage.removeItem("mappedRules");
+                          sessionStorage.removeItem("gapAnalysis");
                         }
                         window.location.href = "/upload";
                       }}

@@ -103,16 +103,27 @@ export async function POST(req: Request) {
     try {
       await connectDB();
       
+      console.log(`[rules-to-column] Looking for project with customerId: ${body.customerId}`);
       const project = await Project.findOne({ customerId: body.customerId });
       
       if (project) {
+        console.log(`[rules-to-column] Found project: ${project.name}, current rulesets count: ${project.rulesets?.length || 0}`);
+        
         // Calculate the next version number
-        const nextVersion = project.rulesets.length > 0
-          ? Math.max(...project.rulesets.map(rs => rs.version)) + 1
+        const currentRulesets = project.rulesets || [];
+        const nextVersion = currentRulesets.length > 0
+          ? Math.max(...currentRulesets.map(rs => rs.version)) + 1
           : 1;
 
         // Create version name
         const versionName = `v${nextVersion}`;
+
+        // Extract raw_rules from the request
+        const rawRules = typeof body.rulesExtractorResponse === "object" 
+          ? (body.rulesExtractorResponse as { rules?: Array<{ title: string; rules: string[] }> }).rules
+          : undefined;
+
+        console.log(`[rules-to-column] Creating ${versionName} with mapped_rules: ${parsedResponse.mapped_rules?.length || 0}, raw_rules: ${rawRules?.length || 0}`);
 
         // Add the new ruleset
         const newRuleset = {
@@ -120,23 +131,30 @@ export async function POST(req: Request) {
           versionName,
           createdAt: new Date(),
           data: {
-            mapped_rules: parsedResponse.mapped_rules,
-            raw_rules: typeof body.rulesExtractorResponse === "object" 
-              ? (body.rulesExtractorResponse as { rules?: Array<{ title: string; rules: string[] }> }).rules
-              : undefined,
+            mapped_rules: parsedResponse.mapped_rules || [],
+            raw_rules: rawRules || [],
           },
         };
 
         project.rulesets.push(newRuleset);
+        
+        // Mark the rulesets array as modified to ensure Mongoose detects the change
+        project.markModified('rulesets');
+        
         await project.save();
         
-        console.log(`Ruleset saved successfully: ${versionName} for customer ${body.customerId}`);
+        console.log(`[rules-to-column] Ruleset saved successfully: ${versionName} for customer ${body.customerId}. Total rulesets: ${project.rulesets.length}`);
       } else {
-        console.error(`Project not found for customerId: ${body.customerId}`);
+        console.error(`[rules-to-column] Project not found for customerId: ${body.customerId}`);
       }
     } catch (saveError) {
-      // Log but don't fail the request if saving fails
-      console.error("Error saving ruleset:", saveError);
+      // Log detailed error information
+      console.error("[rules-to-column] Error saving ruleset:", saveError);
+      console.error("[rules-to-column] Error details:", {
+        customerId: body.customerId,
+        message: saveError instanceof Error ? saveError.message : String(saveError),
+        stack: saveError instanceof Error ? saveError.stack : undefined,
+      });
     }
 
     return NextResponse.json(parsedResponse);

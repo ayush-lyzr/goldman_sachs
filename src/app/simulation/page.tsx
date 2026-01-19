@@ -369,16 +369,18 @@ function SimulationPageContent() {
           </div>
         </div>
 
-        <div className="flex justify-end">
+        {/* <div className="flex justify-end">
           <Button 
-            onClick={() => router.push(`/report${isComparing ? "?compare=true" : ""}`)} 
+            // Exiting compare mode when continuing forward keeps report generation
+            // consistent with the normal simulation run.
+            onClick={() => router.push("/report")} 
             size="lg"
             disabled={isLoading}
           >
             Generate Report
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
-        </div>
+        </div> */}
       </div>
     </AppLayout>
   );
