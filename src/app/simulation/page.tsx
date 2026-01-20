@@ -256,16 +256,16 @@ function SimulationPageContent() {
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Universe Simulation</h1>
-            <p className="text-muted-foreground">
-              {isComparing
-                ? "Compare universe impact from guideline changes"
-                : "Visualize how rules filter the tradable universe"
-              }
-            </p>
-          </div>
           <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Universe Simulation</h1>
+              <p className="text-muted-foreground">
+                {isComparing
+                  ? "Compare universe impact from guideline changes"
+                  : "Visualize how rules filter the tradable universe"
+                }
+              </p>
+            </div>
             {!isComparing && gapAnalysisData.length > 0 && (
               <Button
                 variant="outline"
@@ -279,9 +279,11 @@ function SimulationPageContent() {
                 className="gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                Re-run Simulation
+                Refresh
               </Button>
             )}
+          </div>
+          <div className="flex items-center gap-3">
             <ComparisonToggle isComparing={isComparing} onToggle={() => setIsComparing(!isComparing)} />
           </div>
         </div>
