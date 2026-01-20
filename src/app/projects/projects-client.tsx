@@ -50,6 +50,34 @@ const CUSTOMERS = [
       Shariah_Compliant: "Yes,No",
     },
   },
+  {
+    id: "company-two",
+    name: "Company Two",
+    fidessa_catalog: {
+      Issuer_Country: "US,GB,DE,FR,JP,IN,CN,CA,AU,CH,SE,NO,BR,MX,SG,XX",
+      Instrument_Type: "Sovereign,Corporate,Sukuk",
+      Composite_Rating: "AAA,AA+,AA,AA-,A+,A,A-,BBB+,BBB,BBB-,BB+,BB,BB-,B+,B,B-,CCC+,CCC,CCC-,CC,C,D,NR",
+      IG_Flag: "Yes,No",
+      Sector: "Government,Financials,Industrial,Utilities,Energy,Real Estate,Communications,Consumer,Healthcare,Technology,Transport,Supranational",
+      Coupon_Rate: "0.0-12.0%",
+      Days_to_Maturity: "1-10957",
+      Shariah_Compliant: "Yes",
+    },
+  },
+  {
+    id: "company-three",
+    name: "Company Three",
+    fidessa_catalog: {
+      Issuer_Country: "US,GB,DE,FR,JP,IN,CN,CA,AU,CH,SE,NO,BR,MX,SG,XX",
+      Instrument_Type: "Sovereign,Supranational,Agency,Corporate",
+      Composite_Rating: "AAA,AA+,AA,AA-,A+,A,A-,BBB+,BBB,BBB-,BB+,BB,BB-,B+,B,B-,CCC+,CCC,CCC-,CC,C,D,NR",
+      IG_Flag: "Conditional: Yes if Issuer_Country is Developing; No if Issuer_Country is Developed",
+      Sector: "Government,Supranational,Financials,Industrial,Utilities,Energy,Real Estate,Communications,Consumer,Healthcare,Technology,Transport",
+      Coupon_Rate: "0.0-12.0%",
+      Days_to_Maturity: "1-10957",
+      Shariah_Compliant: "No",
+    },
+  },
 ];
 
 function formatDate(iso?: string): string {
