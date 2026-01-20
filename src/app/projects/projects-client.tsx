@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 
 type ProjectStatus = "Compliant" | "Under Review" | "Issues Found";
 
@@ -149,41 +150,33 @@ export default function ProjectsClient() {
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       {/* Header - Goldman Sachs Branded */}
-      <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 bg-[#64A8F0] border-b border-[#5594d9] shadow-sm">
+      <header className="flex items-center justify-between px-4 lg:px-6 py-2 bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center gap-6">
           {/* Goldman Sachs Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 bg-white rounded-sm shadow-sm">
-              <span className="font-bold text-[#64A8F0] text-base tracking-tight">GS</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-white font-semibold text-base leading-tight hidden sm:inline">Goldman Sachs</span>
-              <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">Investment Management</span>
+            <div className="flex items-center justify-center">
+              <Image 
+                src="/Goldman-logo.svg" 
+                alt="Goldman Sachs" 
+                width={80} 
+                height={80}
+                className="w-20 h-20"
+              />
             </div>
           </div>
           
           {/* Project Info */}
-          <div className="flex items-center gap-3 border-l border-white/20 pl-6 ml-2">
-            <div>
-              <h2 className="font-semibold text-white text-sm">
-                Client Projects
-              </h2>
-              <p className="text-[11px] text-white/70 font-medium">
-                {loading ? "Loading..." : `${stats.total} Active Projects`}
-              </p>
-            </div>
-            {!loading && stats.total > 0 && stats.compliant === stats.total && (
-              <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-white/95 text-[#64A8F0] shadow-sm">
-                All Compliant
-              </span>
-            )}
+          <div className="flex items-center gap-3 border-l border-slate-200 pl-6 ml-2">
+            <h2 className="font-semibold text-slate-900 text-sm">
+              Client Projects
+            </h2>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button 
             onClick={() => void load()}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#64A8F0] bg-white border border-white rounded-lg hover:bg-white/90 transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#64A8F0] border border-[#64A8F0] rounded-lg hover:bg-[#5594d9] transition-colors shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -329,7 +322,18 @@ export default function ProjectsClient() {
               {projects?.map((project, idx) => (
                 <div 
                   key={project.id} 
-                  className="border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors animate-fade-in-up"
+                  onClick={() => {
+                    if (project.customerId && typeof window !== "undefined") {
+                      sessionStorage.setItem("currentCustomerId", project.customerId);
+                      sessionStorage.setItem("currentProjectId", project.id);
+                      sessionStorage.removeItem("extractedRules");
+                      sessionStorage.removeItem("extractedPDF");
+                      sessionStorage.removeItem("mappedRules");
+                      sessionStorage.removeItem("gapAnalysis");
+                    }
+                    window.location.href = "/upload";
+                  }}
+                  className="border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors animate-fade-in-up cursor-pointer"
                   style={{ animationDelay: `${idx * 50}ms` }}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -337,10 +341,14 @@ export default function ProjectsClient() {
                       <h4 className="font-semibold text-slate-900">{project.name}</h4>
                       <p className="text-sm text-slate-500">{project.type}</p>
                     </div>
-                    <StatusBadge status={project.status || "Compliant"} />
+                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
                   
-                  <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
+                  <div className="flex items-center gap-4 text-sm text-slate-500">
                     <div className="flex items-center gap-1.5">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -349,37 +357,6 @@ export default function ProjectsClient() {
                     </div>
                     <span className="text-slate-300">•</span>
                     <span>{project.rulesCount} rules</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => {
-                        if (project.customerId && typeof window !== "undefined") {
-                          sessionStorage.setItem("currentCustomerId", project.customerId);
-                          // Also set the project ID for consistency
-                          sessionStorage.setItem("currentProjectId", project.id);
-                          // Clear any previously extracted rules to ensure fresh extraction for new uploads
-                          sessionStorage.removeItem("extractedRules");
-                          sessionStorage.removeItem("extractedPDF");
-                          sessionStorage.removeItem("mappedRules");
-                          sessionStorage.removeItem("gapAnalysis");
-                        }
-                        window.location.href = "/upload";
-                      }}
-                      className="flex-1 inline-flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
-                      <span>View Guidelines</span>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => void load()}
-                      className="p-2.5 text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
               ))}

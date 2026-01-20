@@ -6,6 +6,7 @@ import { Bell, RefreshCw } from "lucide-react";
 import { UpdateGuidelinesDialog } from "@/components/dashboard/UpdateGuidelinesDialog";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface AppHeaderProps {
   mandateName?: string;
@@ -50,38 +51,31 @@ export function AppHeader({ mandateName, status = "compliant" }: AppHeaderProps)
   const displayName = mandateName || projectName || "No Project Loaded";
 
   return (
-    <header className="flex items-center justify-between px-4 lg:px-6 py-3.5 bg-[#64A8F0] border-b border-[#5594d9] shadow-sm">
+    <header className="flex items-center justify-between px-4 lg:px-6 py-2 bg-white border-b border-slate-200 shadow-sm">
       <div className="flex items-center gap-6">
         {/* Goldman Sachs Logo */}
         <Link
           href="/"
           aria-label="Go to home"
-          className="flex items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#64A8F0] hover:opacity-95 active:opacity-90 transition-opacity"
+          className="flex items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 hover:opacity-80 active:opacity-70 transition-opacity"
         >
-          <div className="flex items-center justify-center w-9 h-9 bg-white rounded-sm shadow-sm">
-            <span className="font-bold text-[#64A8F0] text-base tracking-tight">GS</span>
+          <div className="flex items-center justify-center">
+            <Image 
+              src="/Goldman-logo.svg" 
+              alt="Goldman Sachs" 
+              width={64} 
+              height={64}
+              className="w-16 h-16"
+            />
           </div>
-          <div className="flex flex-col">
-            <span className="text-white font-semibold text-base leading-tight hidden sm:inline">Goldman Sachs</span>
-            <span className="text-white/70 text-[10px] font-medium uppercase tracking-wider hidden sm:inline">
-              Investment Management
-            </span>
-          </div>
+          
         </Link>
         
         {/* Project Info */}
-        <div className="flex items-center gap-3 border-l border-white/20 pl-6 ml-2">
-          <div>
-            <h2 className="font-semibold text-white text-sm">
-              {isLoading ? "Loading..." : displayName}
-            </h2>
-            <p className="text-[11px] text-white/70 font-medium">Guidelines Project</p>
-          </div>
-          {currentStatus.variant === "success" && (
-            <Badge className="bg-white/95 text-[#64A8F0] hover:bg-white border-0 shadow-sm font-medium">
-              {currentStatus.label}
-            </Badge>
-          )}
+        <div className="flex items-center gap-3 border-l border-slate-200 pl-6 ml-2">
+          <h2 className="font-semibold text-slate-900 text-sm">
+            Project Name: {isLoading ? "Loading..." : displayName}
+          </h2>
           {currentStatus.variant === "warning" && (
             <Badge className="bg-amber-500 text-white hover:bg-amber-600 border-0 shadow-sm font-medium">
               {currentStatus.label}
