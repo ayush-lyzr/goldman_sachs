@@ -74,18 +74,9 @@ export function AppHeader({ mandateName, status = "compliant" }: AppHeaderProps)
         {/* Project Info */}
         <div className="flex items-center gap-3 border-l border-slate-200 pl-6 ml-2">
           <h2 className="font-semibold text-slate-900 text-sm">
-            Project Name: {isLoading ? "Loading..." : displayName}
+            {isLoading ? "Loading..." : displayName} Project
           </h2>
-          {currentStatus.variant === "warning" && (
-            <Badge className="bg-amber-500 text-white hover:bg-amber-600 border-0 shadow-sm font-medium">
-              {currentStatus.label}
-            </Badge>
-          )}
-          {currentStatus.variant === "destructive" && (
-            <Badge className="bg-rose-500 text-white hover:bg-rose-600 border-0 shadow-sm font-medium">
-              {currentStatus.label}
-            </Badge>
-          )}
+          
         </div>
       </div>
 

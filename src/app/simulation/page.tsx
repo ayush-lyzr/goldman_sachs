@@ -11,7 +11,7 @@ import { ComparisonToggle } from "@/components/comparison/ComparisonToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, TrendingDown, Target, Layers, GitCompare, ArrowDown, Loader2, RefreshCw } from "lucide-react";
+import { ArrowRight, TrendingDown, Target, Layers, GitCompare, ArrowDown, Loader2, RefreshCw, Database } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -51,11 +51,26 @@ const sampleSecurities = [
   { ticker: "V", name: "Visa Inc.", sector: "Financials", rating: "AA-" },
 ];
 
+// Hardcoded bond universe data
+const bondUniverseData = [
+  { id: 986476, bondId: "BND000001", name: "State of California Zero Coupon Bond due 2043", issuer: "State of California", countryRisk: "US", countryIssuer: "US", type: "Municipal", seniority: "Senior", currency: "USD" },
+  { id: 681391, bondId: "BND000002", name: "International Bank for Reconstruction and Develop", issuer: "International Bank for Reconstruction and Develop", countryRisk: "XX", countryIssuer: "XX", type: "Supranational", seniority: "Senior", currency: "USD" },
+  { id: 667210, bondId: "BND000003", name: "French Republic 3.58% Inflation-Linked Bond due", issuer: "French Republic", countryRisk: "FR", countryIssuer: "FR", type: "Sovereign", seniority: "Subordinated", currency: "EUR" },
+  { id: 823727, bondId: "BND000004", name: "JPMorgan Chase & Co 7.36% Inflation-Linked Bon", issuer: "JPMorgan Chase & Co", countryRisk: "US", countryIssuer: "US", type: "Corporate", seniority: "Senior Subordinated", currency: "USD" },
+  { id: 105548, bondId: "BND000005", name: "Emirates Islamic Bank PJSC Floating Rate Notes e", issuer: "Emirates Islamic Bank PJSC", countryRisk: "AE", countryIssuer: "AE", type: "Sukuk", seniority: "Subordinated", currency: "AED" },
+  { id: 590908, bondId: "BND000006", name: "Citigroup Inc 11.59% Inflation-Linked Bond due 20", issuer: "Citigroup Inc", countryRisk: "US", countryIssuer: "US", type: "Corporate", seniority: "Subordinated", currency: "USD" },
+  { id: 368324, bondId: "BND000007", name: "Manulife Financial Corporation 2.96% Inflation-Lin", issuer: "Manulife Financial Corporation", countryRisk: "CA", countryIssuer: "CA", type: "Corporate", seniority: "Subordinated", currency: "CAD" },
+  { id: 16774, bondId: "BND000008", name: "Government of Malaysia 2.61% Inflation-Linked Br", issuer: "Government of Malaysia", countryRisk: "MY", countryIssuer: "MY", type: "Sukuk", seniority: "Senior", currency: "MYR" },
+  { id: 12825, bondId: "BND000009", name: "Swiss Confederation 2.28% Inflation-Linked Bond", issuer: "Swiss Confederation", countryRisk: "CH", countryIssuer: "CH", type: "Sovereign", seniority: "Senior", currency: "CHF" },
+  { id: 947887, bondId: "BND000010", name: "Severn Trent Utilities Finance plc 5.32% Subordina", issuer: "Severn Trent Utilities Finance plc", countryRisk: "GB", countryIssuer: "GB", type: "Corporate", seniority: "Subordinated", currency: "GBP" },
+];
+
 function SimulationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isComparing, setIsComparing] = useState(searchParams.get("compare") === "true");
   const [isOpen, setIsOpen] = useState(false);
+  const [isUniverseOpen, setIsUniverseOpen] = useState(false);
   
   // SQL Agent state
   const [gapAnalysisData, setGapAnalysisData] = useState<ConstraintDelta[]>([]);
@@ -370,6 +385,126 @@ function SimulationPageContent() {
 
           </div>
         </div>
+
+        {/* Bond Universe Collapsible Table */}
+        <Collapsible open={isUniverseOpen} onOpenChange={setIsUniverseOpen}>
+          <Card className="overflow-hidden border-slate-200/60">
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10 group-hover:bg-blue-500/15 transition-colors">
+                    <Database className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Post Filtering Database
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {bondUniverseData.length} securities in filtered database
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {isUniverseOpen ? "Hide" : "Show"} Details
+                  </Badge>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+                      isUniverseOpen ? "rotate-180" : ""
+                    }`} 
+                  />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <div className="border-t border-slate-200/60">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50/80 border-b border-slate-200/60">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Bond ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Issuer</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Country Risk</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Country Issuer</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Seniority</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600">Currency</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200/40 bg-white">
+                      {bondUniverseData.map((bond, index) => (
+                        <tr 
+                          key={bond.id} 
+                          className="hover:bg-slate-50/50 transition-colors"
+                          style={{ 
+                            animationDelay: `${index * 30}ms`,
+                          }}
+                        >
+                          <td className="px-4 py-3 text-xs text-slate-600 font-mono">{bond.id}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-xs font-mono bg-blue-50/50 border-blue-200/50 text-blue-700">
+                              {bond.bondId}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-900 max-w-xs truncate" title={bond.name}>
+                            {bond.name}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-700 max-w-xs truncate" title={bond.issuer}>
+                            {bond.issuer}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="secondary" className="text-xs font-mono">
+                              {bond.countryRisk}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="secondary" className="text-xs font-mono">
+                              {bond.countryIssuer}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                bond.type === "Sovereign" ? "bg-purple-50/50 border-purple-200/50 text-purple-700" :
+                                bond.type === "Corporate" ? "bg-indigo-50/50 border-indigo-200/50 text-indigo-700" :
+                                bond.type === "Supranational" ? "bg-cyan-50/50 border-cyan-200/50 text-cyan-700" :
+                                bond.type === "Municipal" ? "bg-green-50/50 border-green-200/50 text-green-700" :
+                                "bg-amber-50/50 border-amber-200/50 text-amber-700"
+                              }`}
+                            >
+                              {bond.type}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                bond.seniority === "Senior" ? "bg-emerald-50/50 border-emerald-200/50 text-emerald-700" :
+                                bond.seniority === "Senior Subordinated" ? "bg-yellow-50/50 border-yellow-200/50 text-yellow-700" :
+                                "bg-orange-50/50 border-orange-200/50 text-orange-700"
+                              }`}
+                            >
+                              {bond.seniority}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge variant="secondary" className="text-xs font-mono font-bold">
+                              {bond.currency}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* <div className="flex justify-end">
           <Button 

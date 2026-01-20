@@ -9,6 +9,7 @@ import { useState } from "react";
 interface ConstraintDelta {
   constraint: string;
   pdf_value: string[];
+  rules: string[];
   fidessa_value: string[];
   delta: string | null;
   matched: boolean;
@@ -298,33 +299,38 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
               </Card>
             </HoverCardTrigger>
 
-            {!rule.matched && rule.delta && (
+            {rule.rules && rule.rules.length > 0 && (
               <HoverCardContent
                 side="bottom"
                 align="start"
                 sideOffset={10}
-                className="w-[min(640px,calc(100vw-2rem))] p-0 overflow-hidden border-amber-500/20"
+                className="w-[min(640px,calc(100vw-2rem))] p-0 overflow-hidden border-slate-500/20"
               >
-                <div className="p-4 bg-gradient-to-br from-amber-500/10 via-amber-500/[0.03] to-transparent">
+                <div className="p-4 bg-gradient-to-br from-slate-500/10 via-slate-500/[0.03] to-transparent">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-500/20">
-                      <Info className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <div className="p-2 rounded-lg bg-blue-500/15 border border-blue-500/20">
+                      <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold text-foreground">
-                          Gap reason
+                          Extracted Rules
                         </p>
                         <span className="text-[10px] text-muted-foreground">
                           Hover preview
                         </span>
                       </div>
-                      <p className="mt-1.5 text-xs text-foreground/80 leading-relaxed">
-                        {rule.delta}
-                      </p>
-                      <p className="mt-2 text-[10px] text-muted-foreground">
-                        Click the row to pin details.
-                      </p>
+                      <div className="mt-2 space-y-2">
+                        {rule.rules.map((ruleText, ruleIndex) => (
+                          <div key={ruleIndex} className="flex gap-2">
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">•</span>
+                            <p className="text-xs text-foreground/80 leading-relaxed flex-1">
+                              {ruleText}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                     
                     </div>
                   </div>
                 </div>
