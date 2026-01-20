@@ -5,6 +5,7 @@ export interface LyzrAgentRequest {
   agent_id: string;
   session_id: string;
   message: string;
+  system_prompt_variables?: Record<string, string | Record<string, string>>;
 }
 
 export interface LyzrApiResponse {

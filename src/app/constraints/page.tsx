@@ -422,6 +422,22 @@ function ConstraintsPageContent() {
       // Step 2: Call gap analysis agent with the rules-to-column response
       setProcessingStep("Performing gap analysis...");
       console.log("Step 2: Calling gap analysis agent...");
+      
+      // Get the selected company's fidessa_catalog from sessionStorage
+      let fidessa_catalog: Record<string, string> | undefined;
+      if (typeof window !== 'undefined') {
+        const storedCompany = sessionStorage.getItem("currentSelectedCompany");
+        if (storedCompany) {
+          try {
+            const company = JSON.parse(storedCompany);
+            fidessa_catalog = company.fidessa_catalog;
+            console.log("Using customer fidessa_catalog:", fidessa_catalog);
+          } catch (err) {
+            console.error("Error parsing selected company:", err);
+          }
+        }
+      }
+      
       const gapAnalysisResponse = await fetch("/api/agents/gap-analysis", {
         method: "POST",
         headers: {
@@ -431,6 +447,7 @@ function ConstraintsPageContent() {
           projectId: projectId,
           customerId: customerId,
           rulesToColumnResponse: rulesToColumnData,
+          ...(fidessa_catalog && { fidessa_catalog }),
         }),
       });
 

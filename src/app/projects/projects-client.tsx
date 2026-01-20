@@ -6,9 +6,16 @@ import Image from "next/image";
 
 type ProjectStatus = "Compliant" | "Under Review" | "Issues Found";
 
+type SelectedCompany = {
+  companyId: string;
+  companyName: string;
+  fidessa_catalog: Record<string, string>;
+};
+
 type Project = {
   id: string;
   customerId?: string;
+  selectedCompany?: SelectedCompany;
   name: string;
   type?: string;
   createdAt?: string;
@@ -26,6 +33,24 @@ type Project = {
 type ProjectsResponse = { projects: Project[] };
 
 const projectTypes = ["Family Office", "Corporate", "UHNI", "Institutional"];
+
+// Customer data - this would typically come from an API in production
+const CUSTOMERS = [
+  {
+    id: "company-one",
+    name: "Company One",
+    fidessa_catalog: {
+      Issuer_Country: "US,GB,DE,FR,JP,IN,CN,CA,AU,CH,SE,NO,BR,MX,SG,XX",
+      Coupon_Rate: "0.0-12.0%",
+      Sector: "Financials,Government,Industrial,Utilities,Energy,Real Estate,Communications,Consumer,Healthcare,Technology,Transport,Supranational",
+      Instrument_Type: "Sovereign,Supranational,Corporate,Agency,Municipal,Sukuk",
+      Composite_Rating: "AAA,AA+,AA,AA-,A+,A,A-,BBB+,BBB,BBB-,BB+,BB,BB-,B+,B,B-,CCC+,CCC,CCC-,CC,C,D,NR",
+      IG_Flag: "Yes,No",
+      Days_to_Maturity: "1-10957",
+      Shariah_Compliant: "Yes,No",
+    },
+  },
+];
 
 function formatDate(iso?: string): string {
   if (!iso) return "—";
@@ -45,6 +70,7 @@ export default function ProjectsClient() {
   const [showModal, setShowModal] = useState(false);
 
   const [name, setName] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState(CUSTOMERS[0]?.id || "");
   const [creating, setCreating] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -82,27 +108,54 @@ export default function ProjectsClient() {
       const trimmed = name.trim();
       if (!trimmed || creating) return;
 
+      // Get the selected customer data
+      const selectedCustomer = CUSTOMERS.find((c) => c.id === selectedCustomerId);
+      if (!selectedCustomer) {
+        setError("Please select a customer");
+        return;
+      }
+
       setCreating(true);
       setError(null);
       try {
         // Generate customerId on the client and send with the request
         const customerId = crypto.randomUUID();
         
+        // Prepare the selectedCompany payload
+        const selectedCompanyPayload = {
+          companyId: selectedCustomer.id,
+          companyName: selectedCustomer.name,
+          fidessa_catalog: selectedCustomer.fidessa_catalog,
+        };
+        
         const res = await fetch("/api/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: trimmed, customerId }),
+          body: JSON.stringify({ 
+            name: trimmed, 
+            customerId,
+            selectedCompany: selectedCompanyPayload,
+          }),
         });
 
-        const data = (await res.json()) as { id?: string; customerId?: string; error?: string };
+        const data = (await res.json()) as { id?: string; customerId?: string; selectedCompany?: SelectedCompany; error?: string };
         if (!res.ok) {
           throw new Error(data?.error ?? `Create failed (${res.status})`);
         }
 
-        // Store the customerId and projectId in sessionStorage
+        // Store the customerId, projectId, and selected company in sessionStorage/localStorage
         if (typeof window !== "undefined") {
           sessionStorage.setItem("currentCustomerId", customerId);
           sessionStorage.setItem("currentProjectId", data.id || customerId);
+          
+          // Store the selected company data in localStorage for this project
+          localStorage.setItem(
+            `project_${data.id}_company`,
+            JSON.stringify(selectedCompanyPayload)
+          );
+          // Also store in sessionStorage for immediate access
+          sessionStorage.setItem("currentSelectedCompany", JSON.stringify(selectedCompanyPayload));
+          
           // Clear any previously extracted rules to ensure fresh state
           sessionStorage.removeItem("extractedRules");
           sessionStorage.removeItem("extractedPDF");
@@ -111,6 +164,7 @@ export default function ProjectsClient() {
         }
 
         setName("");
+        setSelectedCustomerId(CUSTOMERS[0]?.id || "");
         setShowModal(false);
         // Navigate to upload page instead of just reloading
         window.location.href = "/upload";
@@ -120,7 +174,7 @@ export default function ProjectsClient() {
         setCreating(false);
       }
     },
-    [creating, load, name],
+    [creating, load, name, selectedCustomerId],
   );
 
   // Stats calculations
@@ -326,6 +380,18 @@ export default function ProjectsClient() {
                     if (project.customerId && typeof window !== "undefined") {
                       sessionStorage.setItem("currentCustomerId", project.customerId);
                       sessionStorage.setItem("currentProjectId", project.id);
+                      
+                      // Load the selected company from project data or localStorage
+                      if (project.selectedCompany) {
+                        sessionStorage.setItem("currentSelectedCompany", JSON.stringify(project.selectedCompany));
+                      } else {
+                        // Try to load from localStorage as fallback
+                        const storedCompany = localStorage.getItem(`project_${project.id}_company`);
+                        if (storedCompany) {
+                          sessionStorage.setItem("currentSelectedCompany", storedCompany);
+                        }
+                      }
+                      
                       sessionStorage.removeItem("extractedRules");
                       sessionStorage.removeItem("extractedPDF");
                       sessionStorage.removeItem("mappedRules");
@@ -389,7 +455,7 @@ export default function ProjectsClient() {
             </div>
 
             <form onSubmit={onCreate}>
-              <label className="block mb-5">
+              <label className="block mb-4">
                 <span className="text-sm font-medium text-slate-700 mb-2 block">Project Name</span>
                 <input
                   ref={inputRef}
@@ -402,6 +468,29 @@ export default function ProjectsClient() {
                 />
               </label>
 
+              <label className="block mb-5">
+                <span className="text-sm font-medium text-slate-700 mb-2 block">Customer</span>
+                <div className="relative">
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#64A8F0]/20 focus:border-[#64A8F0] transition-all appearance-none bg-white cursor-pointer"
+                  >
+                    {CUSTOMERS.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5">Select the customer whose catalog will be used for gap analysis</p>
+              </label>
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -412,7 +501,7 @@ export default function ProjectsClient() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!name.trim() || creating}
+                  disabled={!name.trim() || !selectedCustomerId || creating}
                   className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[#64A8F0] rounded-xl hover:bg-[#5594d9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
                   {creating ? "Creating..." : "Create Project"}

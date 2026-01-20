@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Project } from "@/models/Project";
 
+type SelectedCompanyInput = {
+  companyId: string;
+  companyName: string;
+  fidessa_catalog: Record<string, string>;
+};
+
 type CreateProjectBody = {
   name?: unknown;
   customerId?: unknown;
+  selectedCompany?: SelectedCompanyInput;
 };
 
 export async function GET() {
@@ -22,7 +29,7 @@ export async function GET() {
 
     console.log("[API /api/projects GET] Fetching projects from database...");
     const docs = await Project.find({})
-      .select("name customerId createdAt rulesets")
+      .select("name customerId selectedCompany createdAt rulesets")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -33,6 +40,7 @@ export async function GET() {
         id: d._id.toString(),
         customerId: d.customerId,
         name: d.name,
+        selectedCompany: d.selectedCompany,
         createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : undefined,
         rulesetsCount: d.rulesets?.length || 0,
         latestRuleset: d.rulesets && d.rulesets.length > 0
@@ -93,7 +101,19 @@ export async function POST(req: Request) {
     );
   }
 
-  console.log("[API /api/projects POST] Creating project:", { name, customerId });
+  // Validate selectedCompany if provided
+  const selectedCompany = body?.selectedCompany;
+  if (selectedCompany) {
+    if (!selectedCompany.companyId || !selectedCompany.companyName || !selectedCompany.fidessa_catalog) {
+      console.error("[API /api/projects POST] ERROR: Invalid selectedCompany data");
+      return NextResponse.json(
+        { error: "selectedCompany must include companyId, companyName, and fidessa_catalog" },
+        { status: 400 },
+      );
+    }
+  }
+
+  console.log("[API /api/projects POST] Creating project:", { name, customerId, selectedCompany: selectedCompany?.companyName });
 
   try {
     console.log("[API /api/projects POST] Connecting to MongoDB...");
@@ -104,6 +124,7 @@ export async function POST(req: Request) {
     const project = await Project.create({ 
       name,
       customerId,
+      ...(selectedCompany && { selectedCompany }),
     });
     console.log("[API /api/projects POST] Project created successfully:", project._id.toString());
 
@@ -112,6 +133,7 @@ export async function POST(req: Request) {
         id: project._id.toString(),
         customerId: project.customerId,
         name: project.name,
+        selectedCompany: project.selectedCompany,
         createdAt: project.createdAt.toISOString(),
       },
       { status: 201 },

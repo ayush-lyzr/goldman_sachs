@@ -6,10 +6,23 @@ import { tryParseJson } from "@/lib/utils";
 
 const AGENT_ID = "696dc951c3a33af8ef0613d8";
 
+interface FidessaCatalog {
+  Issuer_Country?: string;
+  Coupon_Rate?: string;
+  Sector?: string;
+  Instrument_Type?: string;
+  Composite_Rating?: string;
+  IG_Flag?: string;
+  Days_to_Maturity?: string;
+  Shariah_Compliant?: string;
+  [key: string]: string | undefined;
+}
+
 interface GapAnalysisRequest {
   projectId: string;
   customerId: string;
   rulesToColumnResponse: string | object;
+  fidessa_catalog?: FidessaCatalog;
 }
 
 interface ConstraintDelta {
@@ -79,12 +92,25 @@ export async function POST(req: Request) {
       ? body.rulesToColumnResponse 
       : JSON.stringify(body.rulesToColumnResponse);
 
-    const response = await callLyzrAgent<GapAnalysisResponse>({
+    // Build the Lyzr agent request
+    const agentRequest: Parameters<typeof callLyzrAgent>[0] = {
       user_id: "harshit@lyzr.ai",
       agent_id: AGENT_ID,
       session_id: body.customerId,
       message,
-    });
+    };
+
+    // Add system_prompt_variables with fidessa_catalog if provided
+    if (body.fidessa_catalog) {
+      // Convert the catalog to a string format for the agent
+      const catalogString = JSON.stringify(body.fidessa_catalog);
+      agentRequest.system_prompt_variables = {
+        fidessa_catalog: catalogString,
+      };
+      console.log("Gap Analysis: Using customer fidessa_catalog:", body.fidessa_catalog);
+    }
+
+    const response = await callLyzrAgent<GapAnalysisResponse>(agentRequest);
 
     // If the response has a 'response' field (meaning it's a wrapped string), try to parse it
     let parsedResponse: GapAnalysisResponse;

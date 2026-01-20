@@ -24,9 +24,16 @@ export interface IRuleset {
   };
 }
 
+export interface ISelectedCompany {
+  companyId: string;
+  companyName: string;
+  fidessa_catalog: Record<string, string>;
+}
+
 export interface IProject extends Document {
   name: string;
   customerId: string;
+  selectedCompany?: ISelectedCompany;
   createdAt: Date;
   rulesets: IRuleset[];
 }
@@ -53,6 +60,24 @@ const RulesetSchema = new Schema<IRuleset>(
   { _id: false }
 );
 
+const SelectedCompanySchema = new Schema(
+  {
+    companyId: {
+      type: String,
+      required: true,
+    },
+    companyName: {
+      type: String,
+      required: true,
+    },
+    fidessa_catalog: {
+      type: Schema.Types.Mixed,
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const ProjectSchema = new Schema<IProject>(
   {
     name: {
@@ -64,6 +89,10 @@ const ProjectSchema = new Schema<IProject>(
       type: String,
       required: true,
       unique: true,
+    },
+    selectedCompany: {
+      type: SelectedCompanySchema,
+      required: false,
     },
     rulesets: {
       type: [RulesetSchema],
