@@ -17,6 +17,7 @@ import {
 interface ConstraintDelta {
   constraint: string;
   pdf_value: string[];
+  rules: string[];
   fidessa_value: string[];
   delta: string | null;
   matched: boolean;
