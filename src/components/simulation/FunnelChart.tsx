@@ -57,7 +57,7 @@ export function FunnelChart({ data, isLoading = false, currentLoadingIndex = -1 
               </div>
               <div>
                 <h3 className="text-lg font-semibold tracking-tight text-slate-900">
-                  Universe Filtering Funnel
+                Tradable securities filtering funnel
                 </h3>
                 {isLoading && (
                   <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">

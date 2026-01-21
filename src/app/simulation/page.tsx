@@ -273,7 +273,7 @@ function SimulationPageContent() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Universe Simulation</h1>
+              <h1 className="text-2xl font-bold text-foreground">Tradable securities</h1>
               <p className="text-muted-foreground">
                 {isComparing
                   ? "Compare universe impact from guideline changes"
@@ -323,7 +323,7 @@ function SimulationPageContent() {
               <div className="flex items-center gap-4">
                 <Loader2 className="w-5 h-5 text-primary animate-spin" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Running Universe Simulation</p>
+                  <p className="text-sm font-medium">Running Simulation</p>
                   <p className="text-xs text-muted-foreground">
                     Processing constraint {currentLoadingIndex + 1} of {gapAnalysisData.length}: {gapAnalysisData[currentLoadingIndex]?.constraint || "..."}
                   </p>
