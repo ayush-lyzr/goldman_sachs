@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { CheckCircle2, XCircle, Info, ArrowRight, Layers } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ConstraintDelta {
   constraint: string;
@@ -19,8 +19,30 @@ interface GapAnalysisDisplayProps {
   mappedRules: ConstraintDelta[];
 }
 
+interface SelectedCompany {
+  companyId: string;
+  companyName: string;
+  fidessa_catalog: Record<string, string>;
+}
+
 export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCompany | null>(null);
+
+  // Load selected customer from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedCompany = sessionStorage.getItem("currentSelectedCompany");
+      if (storedCompany) {
+        try {
+          const company = JSON.parse(storedCompany) as SelectedCompany;
+          setSelectedCustomer(company);
+        } catch (error) {
+          console.error("Error parsing selected company:", error);
+        }
+      }
+    }
+  }, []);
 
   // Format constraint name by removing underscores and converting to title case
   const formatConstraintName = (name: string) => {
@@ -128,13 +150,13 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
         <div className="col-span-3">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
-            Guidelines
+            PDF Values
           </span>
         </div>
         <div className="col-span-4">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-            Database
+            Fidessa Values {selectedCustomer && `(${selectedCustomer.companyName})`}
           </span>
         </div>
         <div className="col-span-2 text-right">
@@ -205,15 +227,29 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                   <div className="col-span-3 space-y-1.5">
                     <div className="flex flex-wrap gap-1.5">
                       {rule.pdf_value.length > 0 ? (
-                        rule.pdf_value.map((value, valueIndex) => (
-                          <Badge
-                            key={valueIndex}
-                            variant="outline"
-                            className="text-[11px] font-medium px-2 py-0.5 bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20 transition-colors"
-                          >
-                            {value}
-                          </Badge>
-                        ))
+                        rule.pdf_value.map((value, valueIndex) => {
+                          const isInFidessa = rule.fidessa_value.includes(value);
+                          return (
+                            <Badge
+                              key={valueIndex}
+                              variant="outline"
+                              className={`
+                                text-[11px] font-medium px-2 py-0.5 transition-all duration-300
+                                ${isInFidessa
+                                  ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20 ring-2 ring-cyan-500/20'
+                                  : 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20 ring-2 ring-red-500/20'
+                                }
+                              `}
+                            >
+                              {value}
+                              {isInFidessa ? (
+                                <CheckCircle2 className="w-3 h-3 ml-1 inline" />
+                              ) : (
+                                <XCircle className="w-3 h-3 ml-1 inline" />
+                              )}
+                            </Badge>
+                          );
+                        })
                       ) : (
                         <span className="text-xs text-muted-foreground/50 italic">—</span>
                       )}

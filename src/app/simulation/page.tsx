@@ -387,7 +387,7 @@ function SimulationPageContent() {
         </div>
 
         {/* Bond Universe Collapsible Table */}
-        <Collapsible open={isUniverseOpen} onOpenChange={setIsUniverseOpen}>
+        {/* <Collapsible open={isUniverseOpen} onOpenChange={setIsUniverseOpen}>
           <Card className="overflow-hidden border-slate-200/60">
             <CollapsibleTrigger className="w-full">
               <div className="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors cursor-pointer group">
@@ -504,7 +504,7 @@ function SimulationPageContent() {
               </div>
             </CollapsibleContent>
           </Card>
-        </Collapsible>
+        </Collapsible> */}
 
         {/* <div className="flex justify-end">
           <Button 
