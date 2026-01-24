@@ -20,7 +20,8 @@ import {
   Sparkles,
   CheckCircle2,
   ChevronDown,
-  Building2
+  Building2,
+  Database
 } from "lucide-react";
 
 interface CustomerCatalog {
@@ -195,7 +196,7 @@ export function ClientRulesModal() {
           className="gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 
             transition-all duration-200 group"
         >
-          <Settings2 className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+          <Database className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
           <span className="hidden sm:inline text-sm font-medium">Client Rules</span>
         </Button>
       </DialogTrigger>
