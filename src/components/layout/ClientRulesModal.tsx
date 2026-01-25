@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Building2,
-  Database
+  Scale
 } from "lucide-react";
 
 interface CustomerCatalog {
@@ -202,7 +202,7 @@ export function ClientRulesModal() {
           size="sm"
           className="gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200 group"
         >
-          <Database className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+          <Scale className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
           <span className="hidden sm:inline text-sm font-medium">Client Rules</span>
         </Button>
       </DialogTrigger>
