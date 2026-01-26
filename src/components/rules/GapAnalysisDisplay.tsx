@@ -227,29 +227,15 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                   <div className="col-span-3 space-y-1.5">
                     <div className="flex flex-wrap gap-1.5">
                       {rule.pdf_value.length > 0 ? (
-                        rule.pdf_value.map((value, valueIndex) => {
-                          const isInFidessa = rule.fidessa_value.includes(value);
-                          return (
-                            <Badge
-                              key={valueIndex}
-                              variant="outline"
-                              className={`
-                                text-[11px] font-medium px-2 py-0.5 transition-all duration-300
-                                ${isInFidessa
-                                  ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20 ring-2 ring-cyan-500/20'
-                                  : 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20 ring-2 ring-red-500/20'
-                                }
-                              `}
-                            >
-                              {value}
-                              {isInFidessa ? (
-                                <CheckCircle2 className="w-3 h-3 ml-1 inline" />
-                              ) : (
-                                <XCircle className="w-3 h-3 ml-1 inline" />
-                              )}
-                            </Badge>
-                          );
-                        })
+                        rule.pdf_value.map((value, valueIndex) => (
+                          <Badge
+                            key={valueIndex}
+                            variant="outline"
+                            className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20"
+                          >
+                            {value}
+                          </Badge>
+                        ))
                       ) : (
                         <span className="text-xs text-muted-foreground/50 italic">—</span>
                       )}
@@ -261,21 +247,31 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                     <div className="flex flex-wrap gap-1.5">
                       {rule.fidessa_value.length > 0 ? (
                         rule.fidessa_value.map((value, valueIndex) => {
-                          const isInPdf = rule.pdf_value.includes(value);
+                          // Check if this Fidessa value is excluded in PDF (has ! prefix)
+                          const isExcludedInPdf = rule.pdf_value.includes(`!${value}`);
+                          // Check if this Fidessa value is included in PDF (no ! prefix)
+                          const isIncludedInPdf = rule.pdf_value.includes(value);
+                          
                           return (
                             <Badge
                               key={valueIndex}
                               variant="outline"
                               className={`
                                 text-[11px] font-medium px-2 py-0.5 transition-all duration-300
-                                ${isInPdf
-                                  ? 'bg-violet-500/10 border-violet-500/40 text-violet-700 dark:text-violet-300 ring-2 ring-violet-500/20'
-                                  : 'bg-slate-500/5 border-slate-500/20 text-slate-600 dark:text-slate-400'
+                                ${isExcludedInPdf
+                                  ? 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20 ring-2 ring-red-500/20'
+                                  : isIncludedInPdf
+                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 ring-2 ring-emerald-500/20'
+                                    : 'bg-slate-500/5 border-slate-500/20 text-slate-600 dark:text-slate-400'
                                 }
                               `}
                             >
                               {value}
-                              {isInPdf && <CheckCircle2 className="w-3 h-3 ml-1 inline" />}
+                              {isExcludedInPdf ? (
+                                <XCircle className="w-3 h-3 ml-1 inline" />
+                              ) : isIncludedInPdf ? (
+                                <CheckCircle2 className="w-3 h-3 ml-1 inline" />
+                              ) : null}
                             </Badge>
                           );
                         })
