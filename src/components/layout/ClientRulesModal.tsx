@@ -303,7 +303,7 @@ export function ClientRulesModal() {
                 </p>
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
                   <Sparkles className="w-3 h-3 text-[#64A8F0]" />
-                  Powered by Fidessa
+                  Powered by Sentinel
                 </div>
               </div>
             </div>

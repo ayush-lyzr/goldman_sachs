@@ -103,7 +103,7 @@ export default function ReportPage() {
 
                 <p className="text-sm leading-relaxed">
                   This compliance verification report analyzes the Investment Guidelines document dated Q4 2024 
-                  against the current Fidessa Sentinel database configuration. The analysis identified 6 constraints, 
+                  against the current Sentinel database configuration. The analysis identified 6 constraints, 
                   all of which are properly configured in the database. No configuration gaps were found.
                 </p>
 
@@ -169,7 +169,7 @@ export default function ReportPage() {
                   <h4 className="font-semibold text-lg text-success">All Rules Verified</h4>
                   <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
                     All 6 extracted constraints from the Investment Guidelines have been successfully matched 
-                    against the Fidessa Sentinel database configuration. No action items required.
+                    against the Sentinel database configuration. No action items required.
                   </p>
                 </div>
 
