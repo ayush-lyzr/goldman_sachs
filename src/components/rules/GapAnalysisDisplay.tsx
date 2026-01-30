@@ -32,6 +32,49 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCompany | null>(null);
 
+  const parseNumericRange = (value: string): { min: number; max: number } | null => {
+    const trimmed = value.trim();
+    const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
+    if (!match) return null;
+    const a = Number(match[1]);
+    const b = Number(match[2]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return { min: Math.min(a, b), max: Math.max(a, b) };
+  };
+
+  const getPdfMatchForSentinelValue = (
+    pdfValues: string[],
+    sentinelValue: string
+  ): { included: boolean; excluded: boolean; related: boolean } => {
+    const includedExact = pdfValues.includes(sentinelValue);
+    const excludedExact = pdfValues.includes(`!${sentinelValue}`);
+    if (includedExact || excludedExact) {
+      return { included: includedExact, excluded: excludedExact, related: true };
+    }
+
+    const sentinelRange = parseNumericRange(sentinelValue);
+    if (!sentinelRange) return { included: false, excluded: false, related: false };
+
+    let included = false;
+    let excluded = false;
+
+    for (const raw of pdfValues) {
+      const trimmed = raw.trim();
+      const isExcluded = trimmed.startsWith("!");
+      const pdfRangeValue = trimmed.replace(/^!\s*/, "");
+      const pdfRange = parseNumericRange(pdfRangeValue);
+      if (!pdfRange) continue;
+
+      const overlaps = Math.max(sentinelRange.min, pdfRange.min) <= Math.min(sentinelRange.max, pdfRange.max);
+      if (!overlaps) continue;
+
+      if (isExcluded) excluded = true;
+      else included = true;
+    }
+
+    return { included, excluded, related: included || excluded };
+  };
+
   // Load selected customer from sessionStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -287,20 +330,23 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                         );
                         
                         // Filter to only show sentinel values that appear in PDF (with or without !)
-                        const relevantValues = allValues.filter(value => {
-                          const isExcludedInPdf = rule.pdf_value.includes(`!${value}`);
-                          const isIncludedInPdf = rule.pdf_value.includes(value);
-                          return isExcludedInPdf || isIncludedInPdf;
-                        });
+                        const relevantValues = allValues.filter(value =>
+                          getPdfMatchForSentinelValue(rule.pdf_value, value).related
+                        );
+
+                        const isCouponRateConstraint = rule.constraint.toLowerCase().includes("coupon");
+                        const valuesToRender =
+                          relevantValues.length === 0 && isCouponRateConstraint ? allValues : relevantValues;
                         
-                        if (relevantValues.length === 0) {
+                        if (valuesToRender.length === 0) {
                           return <span className="text-xs text-muted-foreground/50 italic">—</span>;
                         }
                         
-                        return relevantValues.map((value, valueIndex) => {
-                          // Check if this Sentinel value is excluded in PDF (has ! prefix)
-                          const isExcludedInPdf = rule.pdf_value.includes(`!${value}`);
-                          const isIncludedInPdf = rule.pdf_value.includes(value);
+                        return valuesToRender.map((value, valueIndex) => {
+                          const match = getPdfMatchForSentinelValue(rule.pdf_value, value);
+                          const isExcludedInPdf = match.excluded;
+                          const isIncludedInPdf = match.included;
+                          const isNeutral = !isExcludedInPdf && !isIncludedInPdf;
                           
                           return (
                             <Badge
@@ -310,12 +356,14 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                                 text-[11px] font-medium px-2 py-0.5 transition-all duration-300
                                 ${isExcludedInPdf
                                   ? 'bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20 ring-2 ring-red-500/20'
-                                  : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 ring-2 ring-emerald-500/20'
+                                  : isIncludedInPdf
+                                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 ring-2 ring-emerald-500/20'
+                                    : 'bg-slate-500/5 border-slate-500/20 text-slate-600 dark:text-slate-400'
                                 }
                               `}
                             >
                               {value}
-                              {isExcludedInPdf ? (
+                              {isNeutral ? null : isExcludedInPdf ? (
                                 <XCircle className="w-3 h-3 ml-1 inline" />
                               ) : (
                                 <CheckCircle2 className="w-3 h-3 ml-1 inline" />
