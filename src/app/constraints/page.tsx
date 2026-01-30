@@ -5,12 +5,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { WorkflowStepper } from "@/components/workflow/WorkflowStepper";
 import { ConstraintCard } from "@/components/constraints/ConstraintCard";
-import { ConstraintComparisonCard } from "@/components/comparison/ConstraintComparisonCard";
-import { ComparisonToggle, VersionInfo } from "@/components/comparison/ComparisonToggle";
+import { RulesVersionTable } from "@/components/comparison/RulesVersionTable";
 import { ExtractedRulesDisplay } from "@/components/constraints/ExtractedRulesDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   ArrowRight, 
   FileText, 
@@ -23,7 +24,7 @@ import {
   Zap,
   BookOpen,
   Clock,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 
 interface ExtractedRule {
@@ -31,19 +32,27 @@ interface ExtractedRule {
   rules: string[];
 }
 
-interface RuleDiff {
-  status: "UNCHANGED" | "MODIFIED" | "NEW" | "REMOVED";
+interface ComparisonResult {
+  tag: "unchanged" | "modified" | "added" | "removed";
   previous: string | null;
   current: string | null;
 }
 
-interface ConstraintDelta {
-  id: string;
-  clauseText: string;
-  previousText?: string;
-  changeType: "added" | "removed" | "modified" | "unchanged";
-  confidence: number;
-  previousConfidence?: number;
+interface VersionComparison {
+  from: string;
+  to: string;
+  results: ComparisonResult[];
+}
+
+interface VersionInfo {
+  version: number;
+  versionName: string;
+  createdAt: string;
+}
+
+interface MultiVersionDiffData {
+  versions: VersionInfo[];
+  comparisons: VersionComparison[];
 }
 
 const steps = [
@@ -151,18 +160,17 @@ const constraintDeltas = [
 function ConstraintsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isComparing, setIsComparing] = useState(searchParams.get("compare") === "true");
   const [extractedRules, setExtractedRules] = useState<ExtractedRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [processingStep, setProcessingStep] = useState<string>("");
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [comparingRules, setComparingRules] = useState(false);
-  const [rulesDiff, setRulesDiff] = useState<{ rules: RuleDiff[] } | null>(null);
+  const [multiVersionDiff, setMultiVersionDiff] = useState<MultiVersionDiffData | null>(null);
+  const [showCompareView, setShowCompareView] = useState(false);
   const [hasExistingVersions, setHasExistingVersions] = useState(false);
   const [checkingVersions, setCheckingVersions] = useState(true);
-  const [availableVersions, setAvailableVersions] = useState<VersionInfo[]>([]);
-  const [selectedCompareVersion, setSelectedCompareVersion] = useState<number | undefined>(undefined);
+  const [comparisonStats, setComparisonStats] = useState<{ total: number; modified: number; added: number; removed: number } | null>(null);
 
   useEffect(() => {
     // Load extracted rules from sessionStorage and check for existing versions
@@ -176,7 +184,11 @@ function ConstraintsPageContent() {
         if (storedRules) {
           try {
             const rules = JSON.parse(storedRules);
-            parsedRules = Array.isArray(rules) ? rules : [];
+            parsedRules = Array.isArray(rules)
+              ? rules
+              : Array.isArray((rules as any)?.rules)
+                ? (rules as any).rules
+                : [];
             setExtractedRules(parsedRules);
           } catch (error) {
             console.error("Error parsing extracted rules:", error);
@@ -200,68 +212,64 @@ function ConstraintsPageContent() {
 
         if (customerId) {
           try {
-            const response = await fetch(`/api/projects/rulesets?customerId=${customerId}`);
+            const response = await fetch(`/api/projects/rulesets?customerId=${customerId}`, {
+              cache: "no-store",
+            });
             if (response.ok) {
               const data = await response.json();
-              // Show toggle if there's at least 1 existing version
+              // Show comparison if there's at least 1 existing version
               hasVersions = data.rulesets && data.rulesets.length > 0;
               setHasExistingVersions(hasVersions);
 
-              // Build versions array with isLatest flag
-              if (hasVersions) {
-                const latestVersionNum = data.rulesets[data.rulesets.length - 1].version;
-                const versionsWithLatest: VersionInfo[] = data.rulesets.map((rs: { version: number; versionName: string; createdAt: string }) => ({
-                  version: rs.version,
-                  versionName: rs.versionName,
-                  createdAt: rs.createdAt,
-                  isLatest: rs.version === latestVersionNum,
-                }));
-                setAvailableVersions(versionsWithLatest);
-                setSelectedCompareVersion(latestVersionNum); // Default to latest
-              }
-
-              // Auto-trigger comparison if there are existing versions and we have extracted rules
+              // Multi-version comparison: always fetch fresh (no session cache)
               if (hasVersions && parsedRules.length > 0 && customerId && projectId) {
-                console.log("[constraints] Auto-triggering comparison mode for version update");
                 setComparingRules(true);
-
                 try {
-                  // Get the latest version (always use latest for auto-compare)
-                  const latestVersion = data.rulesets[data.rulesets.length - 1].version;
-
-                  // Fetch the full data for the latest version
-                  const versionResponse = await fetch(`/api/projects/rulesets/${latestVersion}?customerId=${customerId}`);
-
-                  if (versionResponse.ok) {
-                    const versionData = await versionResponse.json();
-                    const latestRawRules = versionData.ruleset.data.raw_rules || [];
-
-                    if (latestRawRules.length > 0) {
-                      // Call the rules diff API
-                      const diffResponse = await fetch("/api/agents/rules-diff", {
-                        method: "POST",
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          projectId: projectId,
-                          customerId: customerId,
-                          rulesExtractorResponse: parsedRules,
-                          latestRulesFromDB: latestRawRules,
-                        }),
-                      });
-
-                      if (diffResponse.ok) {
-                        const diffData = await diffResponse.json();
-                        console.log("[constraints] Auto-comparison complete:", diffData);
-                        setRulesDiff(diffData);
-                        setIsComparing(true);
-                      }
+                  const versionDataPromises = data.rulesets.map(async (rs: { version: number; versionName: string; createdAt: string }) => {
+                    const versionResponse = await fetch(`/api/projects/rulesets/${rs.version}?customerId=${customerId}`, {
+                      cache: "no-store",
+                    });
+                    if (versionResponse.ok) {
+                      const versionData = await versionResponse.json();
+                      return {
+                        version: rs.version,
+                        versionName: rs.versionName,
+                        createdAt: rs.createdAt,
+                        raw_rules: versionData.ruleset.data.raw_rules || []
+                      };
                     }
+                    return null;
+                  });
+
+                  const allVersionData = (await Promise.all(versionDataPromises)).filter(Boolean);
+                  const nextVersionNum = allVersionData.length + 1;
+
+                  // Include the current extraction as the next version (v2, v3, ...) so the API compares all versions including the one we just calculated
+                  allVersionData.push({
+                    version: nextVersionNum,
+                    versionName: `v${nextVersionNum}`,
+                    createdAt: new Date().toISOString(),
+                    raw_rules: parsedRules
+                  });
+
+                  const diffResponse = await fetch("/api/agents/rules-diff", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    cache: "no-store",
+                    body: JSON.stringify({
+                      projectId,
+                      customerId,
+                      versions: allVersionData,
+                    }),
+                  });
+
+                  if (diffResponse.ok) {
+                    const diffData = await diffResponse.json();
+                    setMultiVersionDiff(diffData);
+                    setShowCompareView(true);
                   }
                 } catch (compareError) {
-                  console.error("[constraints] Auto-comparison failed:", compareError);
-                  // Don't show error to user, just disable comparison mode
+                  console.error("[constraints] Multi-version comparison failed:", compareError);
                 } finally {
                   setComparingRules(false);
                 }
@@ -280,112 +288,8 @@ function ConstraintsPageContent() {
     loadData();
   }, []);
 
-  const handleCompareToggle = async () => {
-    if (!isComparing) {
-      // Turning comparison mode ON - fetch and compare
-      await fetchAndCompareRules();
-    } else {
-      // Turning comparison mode OFF - just toggle
-      setIsComparing(false);
-      setRulesDiff(null);
-    }
-  };
-
-  // Handler for version selection - auto-compares if already in compare mode
-  const handleVersionSelect = async (version: number) => {
-    setSelectedCompareVersion(version);
-    
-    // If we're already in compare mode, automatically re-compare with the new version
-    if (isComparing) {
-      await fetchAndCompareRules(version);
-    }
-  };
-
-  const fetchAndCompareRules = async (versionToCompare?: number) => {
-    if (extractedRules.length === 0) {
-      alert("No extracted rules available for comparison. Please extract rules first.");
-      return;
-    }
-
-    setComparingRules(true);
-    try {
-      // Get customerId and projectId from sessionStorage
-      let customerId = "";
-      let projectId = "";
-
-      if (typeof window !== 'undefined') {
-        customerId = sessionStorage.getItem("currentCustomerId") || "";
-        projectId = sessionStorage.getItem("currentProjectId") || "";
-
-        if (!customerId || !projectId) {
-          throw new Error("Missing customer or project ID. Please start from the upload step.");
-        }
-      }
-
-      // Use the provided version or the selected version from state
-      const targetVersion = versionToCompare ?? selectedCompareVersion;
-
-      if (!targetVersion) {
-        alert("Please select a version to compare against.");
-        return;
-      }
-
-      // Fetch the full data for the selected version
-      const versionResponse = await fetch(`/api/projects/rulesets/${targetVersion}?customerId=${customerId}`);
-
-      if (!versionResponse.ok) {
-        throw new Error("Failed to fetch version data");
-      }
-
-      const versionData = await versionResponse.json();
-      const versionRawRules = versionData.ruleset.data.raw_rules || [];
-
-      if (versionRawRules.length === 0) {
-        alert("Selected version has no raw rules to compare against.");
-        return;
-      }
-
-      // Step 2: Call the rules diff API
-      const diffResponse = await fetch("/api/agents/rules-diff", {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          projectId: projectId,
-          customerId: customerId,
-          rulesExtractorResponse: extractedRules,
-          latestRulesFromDB: versionRawRules,
-        }),
-      });
-
-      if (!diffResponse.ok) {
-        const errorData = await diffResponse.json();
-        throw new Error(errorData.error || "Failed to compare rules");
-      }
-
-      const diffData = await diffResponse.json();
-      console.log("Rules diff result:", diffData);
-
-      // Store the diff data and enable comparison mode
-      setRulesDiff(diffData);
-      setIsComparing(true);
-    } catch (error) {
-      console.error("Error comparing rules:", error);
-      alert(error instanceof Error ? error.message : "Failed to compare rules. Please try again.");
-    } finally {
-      setComparingRules(false);
-    }
-  };
 
   const handleGenerateRules = async () => {
-    // Even if the user was comparing versions, the forward flow should run the
-    // real pipeline (rules → gap analysis) and then continue normally.
-    // Comparison mode is meant for review, not to replace downstream steps.
-    if (isComparing) {
-      setIsComparing(false);
-      setRulesDiff(null);
-    }
 
     if (extractedRules.length === 0) {
       alert("No extracted rules available. Please upload and extract a document first.");
@@ -415,6 +319,7 @@ function ConstraintsPageContent() {
         headers: {
           'Content-Type': 'application/json',
         },
+        cache: "no-store",
         body: JSON.stringify({
           projectId: projectId,
           customerId: customerId,
@@ -459,6 +364,7 @@ function ConstraintsPageContent() {
         headers: {
           'Content-Type': 'application/json',
         },
+        cache: "no-store",
         body: JSON.stringify({
           projectId: projectId,
           customerId: customerId,
@@ -497,30 +403,7 @@ function ConstraintsPageContent() {
     }
   };
   
-  // Transform API diff response to UI format
-  const transformedDiff: ConstraintDelta[] = rulesDiff?.rules ? rulesDiff.rules.map((rule: RuleDiff, index: number) => {
-    const changeTypeMap: Record<string, "added" | "removed" | "modified" | "unchanged"> = {
-      "NEW": "added",
-      "REMOVED": "removed",
-      "MODIFIED": "modified",
-      "UNCHANGED": "unchanged"
-    };
-
-    return {
-      id: `rule-${index + 1}`,
-      clauseText: rule.current || rule.previous || "N/A",
-      previousText: rule.previous || undefined,
-      changeType: changeTypeMap[rule.status] || "unchanged",
-      confidence: 95, // Default confidence since API doesn't provide it
-      previousConfidence: rule.status === "MODIFIED" ? 90 : undefined,
-    };
-  }) : [];
-
-  // Use transformed diff data if available, otherwise use demo data
-  const displayedDeltas: ConstraintDelta[] = isComparing && rulesDiff ? transformedDiff : constraintDeltas;
-
-  const addedCount = displayedDeltas.filter((c: ConstraintDelta) => c.changeType === "added").length;
-  const modifiedCount = displayedDeltas.filter((c: ConstraintDelta) => c.changeType === "modified").length;
+  const isComparing = showCompareView && multiVersionDiff !== null;
 
   // Calculate stats from extracted rules
   const totalRules = extractedRules.reduce((acc, section) => acc + section.rules.length, 0);
@@ -541,39 +424,68 @@ function ConstraintsPageContent() {
           <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-violet-500/15 rounded-full blur-3xl" />
           
-          <div className="relative flex items-start justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
-                  <FileSearch className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                      Step 2 of 5
-                    </span>
-                    <span className="w-1 h-1 rounded-full bg-white/30" />
-                    <span className="text-[10px] font-medium text-cyan-400">
-                      {loading ? "Processing..." : "Extraction Complete"}
-                    </span>
+          <div className="relative">
+            <div className="flex items-start justify-between mb-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
+                    <FileSearch className="w-4 h-4" />
                   </div>
-                  <h1 className="text-xl font-bold tracking-tight">
-                    {isComparing ? "Compare Guidelines" : "Constraint Extraction"}
-                  </h1>
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                        Step 2 of 5
+                      </span>
+                      <span className="w-1 h-1 rounded-full bg-white/30" />
+                      <span className="text-[10px] font-medium text-cyan-400">
+                        {loading ? "Processing..." : "Extraction Complete"}
+                      </span>
+                    </div>
+                    <h1 className="text-xl font-bold tracking-tight">
+                      {isComparing ? "Compare Guidelines" : "Constraint Extraction"}
+                    </h1>
+                  </div>
                 </div>
+                
               </div>
-              
+              {multiVersionDiff !== null && !comparingRules && (
+                <div className="flex items-center gap-3 shrink-0">
+                  <Label htmlFor="compare-switch" className="text-sm font-medium text-white/90 cursor-pointer">
+                    Compare
+                  </Label>
+                  <Switch
+                    id="compare-switch"
+                    checked={showCompareView}
+                    onCheckedChange={setShowCompareView}
+                    className="data-[state=checked]:bg-cyan-500"
+                  />
+                </div>
+              )}
             </div>
 
-            {hasExistingVersions && !checkingVersions && (
-              <ComparisonToggle 
-                isComparing={isComparing} 
-                onToggle={handleCompareToggle}
-                isLoading={comparingRules}
-                versions={availableVersions}
-                selectedVersion={selectedCompareVersion}
-                onVersionSelect={handleVersionSelect}
-              />
+            {/* Comparison Stats - shown inline when comparing */}
+            {isComparing && comparisonStats && (
+              <div className="flex items-center gap-4 border-t border-white/10 pt-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Total Changes</span>
+                  <span className="text-2xl font-bold text-white">{comparisonStats.total}</span>
+                </div>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Modified</span>
+                  <span className="text-2xl font-bold text-amber-400">{comparisonStats.modified}</span>
+                </div>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Added</span>
+                  <span className="text-2xl font-bold text-emerald-400">{comparisonStats.added}</span>
+                </div>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Removed</span>
+                  <span className="text-2xl font-bold text-rose-400">{comparisonStats.removed}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -581,64 +493,10 @@ function ConstraintsPageContent() {
         {/* Workflow Stepper */}
         <WorkflowStepper steps={steps} />
 
-        {/* Comparison Mode Banner */}
-        {isComparing && (
-          <Card className="border-primary/30 bg-gradient-to-r from-primary/5 via-primary/[0.02] to-transparent overflow-hidden animate-fade-up">
-            <CardContent className="py-3 px-4">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                  <GitCompare className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {rulesDiff ? "Version Comparison Complete" : "Comparing Guidelines"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
-                    {rulesDiff ? (
-                      <>
-                        <span className="font-mono text-[10px]">
-                          {availableVersions.find(v => v.version === selectedCompareVersion)?.versionName || 'Selected Version'}
-                          {availableVersions.find(v => v.version === selectedCompareVersion)?.isLatest ? ' (latest)' : ''}
-                        </span>
-                        <ArrowRight className="w-3 h-3" />
-                        <span className="font-mono text-[10px]">Current Extraction</span>
-                        <CheckCircle className="w-3 h-3 text-emerald-500 ml-1" />
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-mono text-[10px]">Investment_Guidelines_Q4_2024.pdf</span>
-                        <ArrowRight className="w-3 h-3" />
-                        <span className="font-mono text-[10px]">Investment_Guidelines_Q1_2025.pdf</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {addedCount > 0 && (
-                    <Badge className="gap-1 px-2.5 py-1 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
-                      {addedCount} Added
-                    </Badge>
-                  )}
-                  {modifiedCount > 0 && (
-                    <Badge className="gap-1 px-2.5 py-1 text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
-                      {modifiedCount} Modified
-                    </Badge>
-                  )}
-                  {addedCount === 0 && modifiedCount === 0 && (
-                    <Badge className="gap-1 px-2.5 py-1 text-[10px] bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30">
-                      No Changes
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-4 gap-4">
+        {/* Main Content Grid: full width when comparing, otherwise main + sidebar */}
+        <div className={isComparing ? "space-y-4" : "grid lg:grid-cols-4 gap-4"}>
           {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className={isComparing ? "w-full space-y-4" : "lg:col-span-3 space-y-4"}>
             {loading ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
@@ -654,7 +512,7 @@ function ConstraintsPageContent() {
                   </p>
                 </CardContent>
               </Card>
-            ) : isComparing ? (
+            ) : isComparing && multiVersionDiff ? (
               <div className="space-y-3">
                 {comparingRules ? (
                   <Card className="border-dashed">
@@ -667,27 +525,15 @@ function ConstraintsPageContent() {
                       </div>
                       <h3 className="text-lg font-semibold text-foreground mb-2">Comparing Versions</h3>
                       <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                        Analyzing differences between current and previous rules...
+                        Analyzing differences across all versions...
                       </p>
                     </CardContent>
                   </Card>
-                ) : displayedDeltas.length > 0 ? (
-                  displayedDeltas.map((constraint: ConstraintDelta, index: number) => (
-                    <div 
-                      key={constraint.id}
-                      className="animate-fade-up opacity-0"
-                      style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'forwards' }}
-                    >
-                      <ConstraintComparisonCard constraint={constraint} />
-                    </div>
-                  ))
                 ) : (
-                  <Card className="border-warning/50">
-                    <CardContent className="py-12 text-center">
-                      <AlertCircle className="w-12 h-12 mx-auto text-warning mb-4" />
-                      <p className="text-sm text-muted-foreground">No comparison data available</p>
-                    </CardContent>
-                  </Card>
+                  <RulesVersionTable 
+                    data={multiVersionDiff} 
+                    onStatsCalculated={setComparisonStats}
+                  />
                 )}
               </div>
             ) : extractedRules.length > 0 ? (
@@ -755,7 +601,8 @@ function ConstraintsPageContent() {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - hidden in compare mode so sheet is full width */}
+          {!isComparing && (
           <div className="space-y-3">
             {/* Document Info Card */}
             <Card className="overflow-hidden animate-fade-up" style={{ animationDelay: '0.2s' }}>
@@ -791,44 +638,31 @@ function ConstraintsPageContent() {
                 </div>
                 
                 <div className="pt-2.5 border-t border-border/50 space-y-2.5">
-                  {isComparing ? (
-                    <>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">New Constraints</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{addedCount}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Modified</span>
-                        <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">{modifiedCount}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Unchanged</span>
-                        <span className="font-bold text-foreground tabular-nums">
-                          {displayedDeltas.filter((c: ConstraintDelta) => c.changeType === "unchanged").length}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Sections Found</span>
-                        <span className="font-bold text-foreground tabular-nums">
-                          {loading ? "..." : (totalSections > 0 ? totalSections : "5")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Total Rules</span>
-                        <span className="font-bold text-foreground tabular-nums">
-                          {loading ? "..." : (totalRules > 0 ? totalRules : "—")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Avg per Section</span>
-                        <span className="font-bold text-primary tabular-nums">
-                          {loading ? "..." : (totalSections > 0 ? (totalRules / totalSections).toFixed(1) : "—")}
-                        </span>
-                      </div>
-                    </>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Sections Found</span>
+                    <span className="font-bold text-foreground tabular-nums">
+                      {loading ? "..." : (totalSections > 0 ? totalSections : "5")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Total Rules</span>
+                    <span className="font-bold text-foreground tabular-nums">
+                      {loading ? "..." : (totalRules > 0 ? totalRules : "—")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Avg per Section</span>
+                    <span className="font-bold text-primary tabular-nums">
+                      {loading ? "..." : (totalSections > 0 ? (totalRules / totalSections).toFixed(1) : "—")}
+                    </span>
+                  </div>
+                  {isComparing && multiVersionDiff && (
+                    <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
+                      <span className="text-muted-foreground">Versions</span>
+                      <span className="font-bold text-primary tabular-nums">
+                        {multiVersionDiff.versions.length}
+                      </span>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -853,11 +687,11 @@ function ConstraintsPageContent() {
                   </div>
                   <div className="flex-1">
                     <span className={`text-sm font-semibold ${loading ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                      {loading ? "Processing..." : (isComparing ? "Comparison Complete" : "Extraction Complete")}
+                      {loading ? "Processing..." : (isComparing ? "Multi-Version Comparison Complete" : "Extraction Complete")}
                     </span>
                     <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
                       {isComparing
-                        ? "Delta analysis complete. Review changes before generating updated rules."
+                        ? "All versions compared. Review the table below to see changes across versions."
                         : loading
                           ? "The extraction agent is processing your document..."
                           : "Constraint Extraction Agent processed the document successfully. Review before proceeding."
@@ -889,7 +723,7 @@ function ConstraintsPageContent() {
                     <p className="text-sm font-semibold text-foreground">Pro Tip</p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       {isComparing
-                        ? "Review each card to see what changed between versions."
+                        ? "The latest version is shown on the left. Scroll horizontally to see older versions."
                         : "Hover over constraint cards to see additional details."
                       }
                     </p>
@@ -898,6 +732,7 @@ function ConstraintsPageContent() {
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
       </div>
     </AppLayout>

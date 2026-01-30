@@ -6,6 +6,7 @@ export interface LyzrAgentRequest {
   session_id: string;
   message: string;
   system_prompt_variables?: Record<string, string | Record<string, string>>;
+  apiKey?: string;
 }
 
 export interface LyzrApiResponse {
@@ -23,19 +24,14 @@ export interface LyzrApiResponse {
 export async function callLyzrAgent<T = unknown>(
   request: LyzrAgentRequest
 ): Promise<T> {
-  const apiKey = process.env.LYZR_API_KEY;
-  
-  // Debug logging for Lyzr API key
-  console.log("[Lyzr Agent] Environment variable check:");
-  console.log("[Lyzr Agent] LYZR_API_KEY present:", !!apiKey);
-  console.log("[Lyzr Agent] Available env vars:", Object.keys(process.env).filter(k => 
-    k.includes('LYZR') || k.includes('API_KEY')
-  ));
+  const apiKey = request.apiKey ?? process.env.LYZR_API_KEY;
   
   if (!apiKey) {
     console.error("[Lyzr Agent] ERROR: LYZR_API_KEY not found in environment");
     throw new Error("LYZR_API_KEY is not configured");
   }
+
+  const { apiKey: _omit, ...body } = request;
 
   const response = await fetch("https://agent-prod.studio.lyzr.ai/v3/inference/chat/", {
     method: "POST",
@@ -43,7 +39,7 @@ export async function callLyzrAgent<T = unknown>(
       "Content-Type": "application/json",
       "x-api-key": apiKey,
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

@@ -128,6 +128,7 @@ export function UploadZone() {
         headers: {
           'Content-Type': 'application/json',
         },
+        cache: "no-store",
         body: JSON.stringify({
           projectId: projectId,
           customerId: customerId,
@@ -148,8 +149,19 @@ export function UploadZone() {
         throw new Error(`Rules extraction failed: ${rulesData.error}${rulesData.parseError ? ` (${rulesData.parseError})` : ''}`);
       }
       
-      // Extract the rules array
-      const parsedRules = rulesData.rules || [];
+      // Extract the rules array (agent responses can vary in shape)
+      const parsedRules =
+        Array.isArray(rulesData)
+          ? rulesData
+          : Array.isArray((rulesData as any)?.rules)
+            ? (rulesData as any).rules
+            : Array.isArray((rulesData as any)?.data?.rules)
+              ? (rulesData as any).data.rules
+              : [];
+
+      if (!Array.isArray(parsedRules) || parsedRules.length === 0) {
+        console.warn("[UploadZone] No rules found in extractor response shape:", rulesData);
+      }
       
       // Step 4: Store both extraction and rules data
       if (typeof window !== 'undefined') {
