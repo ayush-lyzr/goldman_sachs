@@ -14,6 +14,7 @@ interface ConstraintDelta {
   // Newer gap-analysis shape
   allowed_values?: string[];
   not_allowed_values?: string[];
+  match_count?: string | null;
   // Backwards compatible shape (older gap-analysis)
   pdf_value?: string[];
   fidessa_value?: string[];
@@ -235,12 +236,6 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
           >
             Allowed
           </Badge>
-          <Badge
-            variant="outline"
-            className="text-[11px] font-medium px-2 py-0.5 bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300"
-          >
-            Not Allowed
-          </Badge>
         </div>
 
         <div className="hidden lg:block w-px bg-border/60 mx-1" />
@@ -361,14 +356,8 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                         const pdfAllowedValues =
                           rule.allowed_values ??
                           legacyPdf.filter(v => !v.trim().startsWith("!")).map(v => v.trim()).filter(Boolean);
-                        const pdfNotAllowedValues =
-                          rule.not_allowed_values ??
-                          legacyPdf
-                            .filter(v => v.trim().startsWith("!"))
-                            .map(v => v.trim().replace(/^!\s*/, ""))
-                            .filter(Boolean);
 
-                        if (pdfAllowedValues.length === 0 && pdfNotAllowedValues.length === 0) {
+                        if (pdfAllowedValues.length === 0) {
                           return <span className="text-xs text-muted-foreground/50 italic">—</span>;
                         }
 
@@ -379,15 +368,6 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                                 key={`pdf-allowed-${valueIndex}`}
                                 variant="outline"
                                 className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
-                              >
-                                {value}
-                              </Badge>
-                            ))}
-                            {pdfNotAllowedValues.map((value, valueIndex) => (
-                              <Badge
-                                key={`pdf-not-allowed-${valueIndex}`}
-                                variant="outline"
-                                className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20"
                               >
                                 {value}
                               </Badge>
@@ -479,11 +459,18 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                   {/* Status */}
                   <div className="col-span-2 flex items-center justify-end">
                     {rule.matched ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                          Match
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                            Match
+                          </span>
+                        </div>
+                        {rule.match_count && (
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            {rule.match_count} matched
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">

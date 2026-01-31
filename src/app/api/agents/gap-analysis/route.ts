@@ -30,6 +30,7 @@ interface ConstraintDelta {
   // Newer agent response shape
   allowed_values?: string[];
   not_allowed_values?: string[];
+  match_count?: string | null;
   // Backwards compatible shape (older agent response)
   pdf_value?: string[];
   fidessa_value?: string[];
@@ -60,6 +61,7 @@ interface GapAnalysisResponse {
  *       "constraint": "Country Restriction",
  *       "allowed_values": [],
  *       "not_allowed_values": ["US", "GB", ...],
+ *       "match_count": "1/12",
  *       "delta": "Description of differences...",
  *       "matched": false
  *     }

@@ -19,6 +19,7 @@ export interface IRuleset {
       // Newer agent response shape
       allowed_values?: string[];
       not_allowed_values?: string[];
+      match_count?: string | null;
       // Backwards compatible shape (older agent response)
       pdf_value?: string[];
       fidessa_value?: string[];

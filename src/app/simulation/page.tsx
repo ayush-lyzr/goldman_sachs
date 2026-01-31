@@ -26,6 +26,7 @@ interface ConstraintDelta {
   // Newer gap-analysis shape
   allowed_values?: string[];
   not_allowed_values?: string[];
+  match_count?: string | null;
   // Backwards compatible shape (older gap-analysis)
   pdf_value?: string[];
   fidessa_value?: string[];
