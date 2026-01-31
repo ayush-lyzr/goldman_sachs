@@ -10,9 +10,13 @@ import { useState, useEffect } from "react";
 
 interface ConstraintDelta {
   constraint: string;
-  pdf_value: string[];
   rules: string[];
-  fidessa_value: string[];
+  // Newer gap-analysis shape
+  allowed_values?: string[];
+  not_allowed_values?: string[];
+  // Backwards compatible shape (older gap-analysis)
+  pdf_value?: string[];
+  fidessa_value?: string[];
   delta: string | null;
   matched: boolean;
 }
@@ -32,44 +36,65 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCompany | null>(null);
 
-  const parseNumericRange = (value: string): { min: number; max: number } | null => {
-    const trimmed = value.trim();
-    const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
-    if (!match) return null;
-    const a = Number(match[1]);
-    const b = Number(match[2]);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
-    return { min: Math.min(a, b), max: Math.max(a, b) };
-  };
-
-  const getPdfMatchForSentinelValue = (
-    pdfValues: string[],
-    sentinelValue: string
-  ): { included: boolean; excluded: boolean; related: boolean } => {
-    const includedExact = pdfValues.includes(sentinelValue);
-    const excludedExact = pdfValues.includes(`!${sentinelValue}`);
-    if (includedExact || excludedExact) {
-      return { included: includedExact, excluded: excludedExact, related: true };
+  const parseNumericSpan = (value: string): { min: number; max: number } | null => {
+    const trimmed = value.trim().replace(/%/g, "");
+    const rangeMatch = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)$/);
+    if (rangeMatch) {
+      const a = Number(rangeMatch[1]);
+      const b = Number(rangeMatch[2]);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+      return { min: Math.min(a, b), max: Math.max(a, b) };
     }
 
-    const sentinelRange = parseNumericRange(sentinelValue);
-    if (!sentinelRange) return { included: false, excluded: false, related: false };
+    const singleMatch = trimmed.match(/^(-?\d+(?:\.\d+)?)$/);
+    if (!singleMatch) return null;
+    const n = Number(singleMatch[1]);
+    if (!Number.isFinite(n)) return null;
+    return { min: n, max: n };
+  };
+
+  const overlapsSpan = (a: { min: number; max: number }, b: { min: number; max: number }) =>
+    Math.max(a.min, b.min) <= Math.min(a.max, b.max);
+
+  const getPdfMatchForSentinelValue = (
+    pdfAllowedValues: string[],
+    pdfNotAllowedValues: string[],
+    sentinelValue: string
+  ): { included: boolean; excluded: boolean; related: boolean } => {
+    const sentinel = sentinelValue.trim();
+    if (!sentinel) return { included: false, excluded: false, related: false };
+
+    // Exact match first (non-numeric constraints)
+    if (pdfNotAllowedValues.includes(sentinel)) {
+      return { included: false, excluded: true, related: true };
+    }
+    if (pdfAllowedValues.includes(sentinel)) {
+      return { included: true, excluded: false, related: true };
+    }
+
+    // Numeric/range overlap (e.g. coupon ranges)
+    const sentinelSpan = parseNumericSpan(sentinel);
+    if (!sentinelSpan) return { included: false, excluded: false, related: false };
 
     let included = false;
     let excluded = false;
 
-    for (const raw of pdfValues) {
-      const trimmed = raw.trim();
-      const isExcluded = trimmed.startsWith("!");
-      const pdfRangeValue = trimmed.replace(/^!\s*/, "");
-      const pdfRange = parseNumericRange(pdfRangeValue);
-      if (!pdfRange) continue;
+    for (const v of pdfNotAllowedValues) {
+      const span = parseNumericSpan(v);
+      if (span && overlapsSpan(sentinelSpan, span)) {
+        excluded = true;
+        break;
+      }
+    }
 
-      const overlaps = Math.max(sentinelRange.min, pdfRange.min) <= Math.min(sentinelRange.max, pdfRange.max);
-      if (!overlaps) continue;
-
-      if (isExcluded) excluded = true;
-      else included = true;
+    if (!excluded) {
+      for (const v of pdfAllowedValues) {
+        const span = parseNumericSpan(v);
+        if (span && overlapsSpan(sentinelSpan, span)) {
+          included = true;
+          break;
+        }
+      }
     }
 
     return { included, excluded, related: included || excluded };
@@ -198,6 +223,53 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex flex-col lg:flex-row gap-3 px-5 py-3 bg-muted/20 rounded-lg border border-border/50">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            PDF Values
+          </span>
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium px-2 py-0.5 bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+          >
+            Allowed
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium px-2 py-0.5 bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300"
+          >
+            Not Allowed
+          </Badge>
+        </div>
+
+        <div className="hidden lg:block w-px bg-border/60 mx-1" />
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Sentinel Values
+          </span>
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium px-2 py-0.5 bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+          >
+            Allowed by PDF
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium px-2 py-0.5 bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300"
+          >
+            Prohibited by PDF
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-[11px] font-medium px-2 py-0.5 bg-slate-500/5 border-slate-500/20 text-slate-600 dark:text-slate-400"
+          >
+            Not Mentioned
+          </Badge>
+        </div>
+      </div>
+
       {/* Column Headers */}
       <div className="grid grid-cols-12 gap-6 px-5 py-3 bg-muted/30 rounded-lg border border-border/50">
         <div className="col-span-3">
@@ -285,33 +357,43 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                   <div className="col-span-3 space-y-1.5">
                     <div className="flex flex-wrap gap-1.5">
                       {(() => {
-                        // Filter out items with exclamation mark
-                        const filteredPdfValues = rule.pdf_value.filter(value => !value.startsWith('!'));
-                        
-                        if (filteredPdfValues.length > 0) {
-                          return filteredPdfValues.map((value, valueIndex) => (
-                            <Badge
-                              key={valueIndex}
-                              variant="outline"
-                              className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20"
-                            >
-                              {value}
-                            </Badge>
-                          ));
-                        } else if (rule.pdf_value.length > 0) {
-                          // All values had exclamation marks, show "any"
-                          return (
-                            <Badge
-                              variant="outline"
-                              className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-cyan-500/10 border-cyan-500/40 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20"
-                            >
-                              any
-                            </Badge>
-                          );
-                        } else {
-                          // No PDF values at all
+                        const legacyPdf = rule.pdf_value ?? [];
+                        const pdfAllowedValues =
+                          rule.allowed_values ??
+                          legacyPdf.filter(v => !v.trim().startsWith("!")).map(v => v.trim()).filter(Boolean);
+                        const pdfNotAllowedValues =
+                          rule.not_allowed_values ??
+                          legacyPdf
+                            .filter(v => v.trim().startsWith("!"))
+                            .map(v => v.trim().replace(/^!\s*/, ""))
+                            .filter(Boolean);
+
+                        if (pdfAllowedValues.length === 0 && pdfNotAllowedValues.length === 0) {
                           return <span className="text-xs text-muted-foreground/50 italic">—</span>;
                         }
+
+                        return (
+                          <>
+                            {pdfAllowedValues.map((value, valueIndex) => (
+                              <Badge
+                                key={`pdf-allowed-${valueIndex}`}
+                                variant="outline"
+                                className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
+                              >
+                                {value}
+                              </Badge>
+                            ))}
+                            {pdfNotAllowedValues.map((value, valueIndex) => (
+                              <Badge
+                                key={`pdf-not-allowed-${valueIndex}`}
+                                variant="outline"
+                                className="text-[11px] font-medium px-2 py-0.5 transition-all duration-300 bg-red-500/10 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/20"
+                              >
+                                {value}
+                              </Badge>
+                            ))}
+                          </>
+                        );
                       })()}
                     </div>
                   </div>
@@ -320,18 +402,37 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                   <div className="col-span-4 space-y-1.5">
                     <div className="flex flex-wrap gap-1.5">
                       {(() => {
-                        if (rule.fidessa_value.length === 0) {
+                        const catalogEntry = selectedCustomer?.fidessa_catalog?.[rule.constraint];
+                        const sentinelSourceValues =
+                          rule.fidessa_value && rule.fidessa_value.length > 0
+                            ? rule.fidessa_value
+                            : typeof catalogEntry === "string" && catalogEntry.trim()
+                              ? [catalogEntry]
+                              : [];
+
+                        if (sentinelSourceValues.length === 0) {
                           return <span className="text-xs text-muted-foreground/50 italic">—</span>;
                         }
                         
                         // Split comma-separated values and flatten the array
-                        const allValues = rule.fidessa_value.flatMap(value => 
+                        const allValues = sentinelSourceValues.flatMap(value => 
                           value.split(',').map(v => v.trim()).filter(v => v)
                         );
+
+                        const legacyPdf = rule.pdf_value ?? [];
+                        const pdfAllowedValues =
+                          rule.allowed_values ??
+                          legacyPdf.filter(v => !v.trim().startsWith("!")).map(v => v.trim()).filter(Boolean);
+                        const pdfNotAllowedValues =
+                          rule.not_allowed_values ??
+                          legacyPdf
+                            .filter(v => v.trim().startsWith("!"))
+                            .map(v => v.trim().replace(/^!\s*/, ""))
+                            .filter(Boolean);
                         
                         // Filter to only show sentinel values that appear in PDF (with or without !)
                         const relevantValues = allValues.filter(value =>
-                          getPdfMatchForSentinelValue(rule.pdf_value, value).related
+                          getPdfMatchForSentinelValue(pdfAllowedValues, pdfNotAllowedValues, value).related
                         );
 
                         const isCouponRateConstraint = rule.constraint.toLowerCase().includes("coupon");
@@ -343,7 +444,7 @@ export function GapAnalysisDisplay({ mappedRules }: GapAnalysisDisplayProps) {
                         }
                         
                         return valuesToRender.map((value, valueIndex) => {
-                          const match = getPdfMatchForSentinelValue(rule.pdf_value, value);
+                          const match = getPdfMatchForSentinelValue(pdfAllowedValues, pdfNotAllowedValues, value);
                           const isExcludedInPdf = match.excluded;
                           const isIncludedInPdf = match.included;
                           const isNeutral = !isExcludedInPdf && !isIncludedInPdf;

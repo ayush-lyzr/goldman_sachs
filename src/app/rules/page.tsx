@@ -16,9 +16,13 @@ import {
 
 interface ConstraintDelta {
   constraint: string;
-  pdf_value: string[];
   rules: string[];
-  fidessa_value: string[];
+  // Newer gap-analysis shape
+  allowed_values?: string[];
+  not_allowed_values?: string[];
+  // Backwards compatible shape (older gap-analysis)
+  pdf_value?: string[];
+  fidessa_value?: string[];
   delta: string | null;
   matched: boolean;
 }

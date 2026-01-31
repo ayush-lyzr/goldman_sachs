@@ -27,8 +27,12 @@ interface GapAnalysisRequest {
 
 interface ConstraintDelta {
   constraint: string;
-  pdf_value: string[];
-  fidessa_value: string[];
+  // Newer agent response shape
+  allowed_values?: string[];
+  not_allowed_values?: string[];
+  // Backwards compatible shape (older agent response)
+  pdf_value?: string[];
+  fidessa_value?: string[];
   delta: string;
   matched: boolean;
 }
@@ -54,8 +58,8 @@ interface GapAnalysisResponse {
  *   "mapped_rules": [
  *     {
  *       "constraint": "Country Restriction",
- *       "pdf_value": [],
- *       "fidessa_value": ["US", "GB", ...],
+ *       "allowed_values": [],
+ *       "not_allowed_values": ["US", "GB", ...],
  *       "delta": "Description of differences...",
  *       "matched": false
  *     }

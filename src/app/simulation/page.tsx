@@ -23,8 +23,12 @@ const STARTING_UNIVERSE = 10000;
 
 interface ConstraintDelta {
   constraint: string;
-  pdf_value: string[];
-  fidessa_value: string[];
+  // Newer gap-analysis shape
+  allowed_values?: string[];
+  not_allowed_values?: string[];
+  // Backwards compatible shape (older gap-analysis)
+  pdf_value?: string[];
+  fidessa_value?: string[];
   delta: string | null;
   matched: boolean;
 }
@@ -107,7 +111,10 @@ function SimulationPageContent() {
     const parts = constraints.map((c) => {
       // Replace underscores with spaces in constraint names
       const constraintName = c.constraint.replace(/_/g, " ");
-      const values = c.pdf_value.join(", ");
+      const legacyPdf = c.pdf_value ?? [];
+      const allowed = c.allowed_values ?? legacyPdf.filter(v => !v.trim().startsWith("!")).map(v => v.trim()).filter(Boolean);
+      const notAllowed = c.not_allowed_values ?? legacyPdf.filter(v => v.trim().startsWith("!")).map(v => `!${v.trim().replace(/^!\s*/, "")}`).filter(Boolean);
+      const values = [...allowed, ...notAllowed].join(", ");
       return `${constraintName} which has pdf_values as ${values}`;
     });
     
