@@ -59,10 +59,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "versions is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.RULES_DIFF_API_KEY;
+    const apiKey = process.env.LYZR_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "RULES_DIFF_API_KEY is not configured" },
+        { error: "LYZR_API_KEY is not configured" },
         { status: 500 }
       );
     }
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     });
 
     const response = await callLyzrAgent({
-      user_id: "mudit@lyzr.ai",
+      user_id: "harshit@lyzr.ai",
       agent_id: AGENT_ID,
       session_id: body.customerId,
       message,
